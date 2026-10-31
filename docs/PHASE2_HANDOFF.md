@@ -1,0 +1,13 @@
+# Phase 2 handoff
+
+Phase 1 uses PostgreSQL ILIKE only; no tokenizer, inverted index, TF-IDF, BM25, embeddings or ranking service.
+
+`documents` contains required `id`, `title`, `content`, `summary`, `category_id`, `author`, `created_at`, `views_count`. `content` is sanitized HTML; `content_plain` is derived Unicode plain text without script/style contents, preserving Vietnamese accents. `author` is a display snapshot; nullable `author_id` links an account. Only PUBLISHED, non-deleted documents belong in a future public index. Taxonomy uses categories and document_tags. Timestamp columns use timestamptz and UTC.
+
+`search_click_logs` contains `id`, nullable `user_id`, `query_string`, nullable `clicked_doc_id`, `timestamp`, `event_type`, nullable self-referencing `search_id`, page, position, filters_json and result_count. SEARCH rows have no clicked document or parent search. Every successful validated search request creates one SEARCH row, including zero results. CLICK rows copy query and filters from their parent, have a published clicked document and validated result membership. Direct home/detail navigation creates no search click. Anonymous linkage uses a random session owner identifier and never email/IP. Filters include category/tag/date and the ordered page result IDs needed to verify clicks.
+
+Analytics: CTR means clicks per SEARCH event in the requested UTC time interval; it may exceed 100%. Views are distinct detail requests per browser/document in a 30-minute interval, written server-side with the document counter in one transaction. Reports, likes, ratings and mentions provide separate explicit feedback; do not equate a click with relevance. Logged queries can contain user-entered personal text; operational access is limited to analytics administrators. Configure retention before public use and do not include raw logs in Git.
+
+The implementation uses aligned 30-minute UTC buckets (not a rolling interval). `owner_key`/`viewer_key` are random anonymous browser identifiers, not raw session cookies or personal identities. `position` is one-based within the recorded page. Manual operator retention uses `npm run logs:prune` (dry-run), with `-- --apply` only for an explicit cleanup; lifetime views_count remains after old events are pruned. No cleanup was applied during verification.
+
+Future evaluation should distinguish zero-result queries, clicked queries, non-clicked queries, repeated interactions and exposure positions. Session/page results describe exposure, not an unbiased relevance judgment. Export only necessary non-sensitive fields. Rebuild any future index when publication/deletion changes; retain Phase 1 API ownership/RBAC checks.

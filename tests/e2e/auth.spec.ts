@@ -1,0 +1,22 @@
+import { test, expect } from '@playwright/test';
+test('register, login, edit own profile and logout through the browser', async ({ page }) => {
+  const suffix = Date.now().toString(36);
+  await page.goto('/register');
+  await page.getByLabel('Tên đăng nhập').fill(`reader_${suffix}`);
+  await page.getByLabel('Email', { exact: true }).fill(`reader_${suffix}@example.test`);
+  await page.getByLabel('Mật khẩu').fill('Browser-test-password-1234');
+  await page.getByRole('button', { name: 'Đăng ký', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await page.getByLabel('Tên hiển thị').fill('Bạn đọc khoa học');
+  await page.getByLabel('Giới thiệu').fill('Quan tâm tới dữ liệu và AI.');
+  await page.getByRole('button', { name: 'Lưu hồ sơ' }).click();
+  await expect(page.getByRole('status')).toHaveText('Đã lưu hồ sơ.');
+  await page.getByRole('button', { name: 'Đăng xuất' }).click();
+  await expect(page.getByRole('link', { name: 'Đăng nhập', exact: true }).first()).toBeVisible();
+  await page.goto('/login');
+  await page.getByLabel('Email', { exact: true }).fill(`reader_${suffix}@example.test`);
+  await page.getByLabel('Mật khẩu').fill('Browser-test-password-1234');
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByLabel('Tên hiển thị')).toHaveValue('Bạn đọc khoa học');
+});

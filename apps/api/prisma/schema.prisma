@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+}
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  SPAM
+}
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+enum EventType {
+  SEARCH
+  CLICK
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  username String @unique
+  passwordHash String @map("password_hash")
+  displayName String @map("display_name")
+  bio String @default("")
+  avatarUrl String? @map("avatar_url")
+  status UserStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  roles UserRole[]
+  documents Document[]
+  comments Comment[]
+  mentions CommentMention[]
+  likes DocumentLike[]
+  ratings DocumentRating[]
+  reports Report[] @relation("Reporter")
+  resolutions Report[] @relation("Resolver")
+  searches SearchClickLog[]
+  views DocumentView[]
+  audits AuditLog[]
+  settings Setting[]
+  @@map("users")
+}
+
+model Role {
+  id String @id @default(uuid()) @db.Uuid
+  key String @unique
+  name String
+  users UserRole[]
+  permissions RolePermission[]
+  @@map("roles")
+}
+model Permission {
+  id String @id @default(uuid()) @db.Uuid
+  key String @unique
+  description String
+  roles RolePermission[]
+  @@map("permissions")
+}
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+model RolePermission {
+  roleId String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique
+  description String @default("")
+  documents Document[]
+  @@map("categories")
+}
+model Tag {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique
+  documents DocumentTag[]
+  @@map("tags")
+}
+model Document {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  slug String @unique
+  content String
+  contentPlain String @map("content_plain")
+  summary String
+  categoryId String @map("category_id") @db.Uuid
+  author String
+  authorId String? @map("author_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  viewsCount Int @default(0) @map("views_count")
+  status DocumentStatus @default(DRAFT)
+  coverImageUrl String? @map("cover_image_url")
+  coverImageAlt String @default("") @map("cover_image_alt")
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  seoTitle String @default("") @map("seo_title")
+  seoDescription String @default("") @map("seo_description")
+  seoKeywords String @default("") @map("seo_keywords")
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authorUser User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  tags DocumentTag[]
+  comments Comment[]
+  likes DocumentLike[]
+  ratings DocumentRating[]
+  reports Report[]
+  clicks SearchClickLog[]
+  views DocumentView[]
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([categoryId, status])
+  @@index([createdAt])
+  @@map("documents")
+}
+model DocumentTag {
+  documentId String @map("document_id") @db.Uuid
+  tagId String @map("tag_id") @db.Uuid
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([documentId, tagId])
+  @@index([tagId, documentId])
+  @@map("document_tags")
+}
+model Comment {
+  id String @id @default(uuid()) @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  parentId String? @map("parent_id") @db.Uuid
+  body String
+  status CommentStatus @default(VISIBLE)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  parent Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies Comment[] @relation("Replies")
+  mentions CommentMention[]
+  reports Report[]
+  @@index([documentId, createdAt])
+  @@map("comments")
+}
+model CommentMention {
+  commentId String @map("comment_id") @db.Uuid
+  mentionedUserId String @map("mentioned_user_id") @db.Uuid
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mentionedUser User @relation(fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  @@id([commentId, mentionedUserId])
+  @@map("comment_mentions")
+}
+model DocumentLike {
+  documentId String @map("document_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([documentId, userId])
+  @@map("document_likes")
+}
+model DocumentRating {
+  documentId String @map("document_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  value Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([documentId, userId])
+  @@map("document_ratings")
+}
+model Report {
+  id String @id @default(uuid()) @db.Uuid
+  reporterId String @map("reporter_id") @db.Uuid
+  documentId String? @map("document_id") @db.Uuid
+  commentId String? @map("comment_id") @db.Uuid
+  reason String
+  description String @default("")
+  status ReportStatus @default(OPEN)
+  resolvedBy String? @map("resolved_by") @db.Uuid
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  reporter User @relation("Reporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  resolver User? @relation("Resolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+  @@map("reports")
+}
+model SearchClickLog {
+  id String @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  queryString String @map("query_string")
+  clickedDocId String? @map("clicked_doc_id") @db.Uuid
+  timestamp DateTime @default(now()) @db.Timestamptz(3)
+  eventType EventType @map("event_type")
+  searchId String? @map("search_id") @db.Uuid
+  page Int @default(1)
+  position Int?
+  filtersJson Json @default("{}") @map("filters_json")
+  resultCount Int? @map("result_count")
+  ownerKey String @map("owner_key")
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [clickedDocId], references: [id], onDelete: Restrict)
+  search SearchClickLog? @relation("SearchClicks", fields: [searchId], references: [id], onDelete: Cascade)
+  clicks SearchClickLog[] @relation("SearchClicks")
+  @@index([eventType, timestamp])
+  @@index([searchId])
+  @@index([queryString])
+  @@map("search_click_logs")
+}
+model DocumentView {
+  id String @id @default(uuid()) @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  viewedAt DateTime @default(now()) @map("viewed_at") @db.Timestamptz(3)
+  viewerKey String @map("viewer_key")
+  bucket BigInt
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@unique([documentId, viewerKey, bucket])
+  @@index([documentId, viewedAt])
+  @@map("document_views")
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @map("actor_id") @db.Uuid
+  action String
+  entityType String @map("entity_type")
+  entityId String? @map("entity_id")
+  metadataJson Json @default("{}") @map("metadata_json")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+model Setting {
+  key String @id
+  valueJson Json @map("value_json")
+  updatedBy String? @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updater User? @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+  @@map("settings")
+}
+model Session {
+  sid String @id @db.VarChar
+  sess Json @db.Json
+  expire DateTime @db.Timestamptz(6)
+  @@index([expire])
+  @@map("sessions")
+}

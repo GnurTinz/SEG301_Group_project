@@ -1,0 +1,56 @@
+{
+  "name": "seg301-news-portal",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    },
+    "minimatch": "^11.0.1"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tsconfig.tests.json",
+    "test": "node scripts/run-tests.mjs",
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "db:generate": "npm run db:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:seed": "npm run db:seed -w apps/api",
+    "db:validate-seed": "tsx apps/api/prisma/validate-seed.ts",
+    "db:local": "node scripts/local-postgres.mjs",
+    "db:verify-fresh": "node scripts/verify-fresh.mjs",
+    "logs:prune": "tsx scripts/prune-logs.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "@types/supertest": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "deepmerge-ts": "^8.0.0",
+    "dotenv-cli": "^10.0.0",
+    "embedded-postgres": "^18.0.0-beta.15",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "prisma": "^6.19.3",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.0.5"
+  }
+}
