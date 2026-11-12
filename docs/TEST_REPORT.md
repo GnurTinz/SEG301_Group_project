@@ -156,3 +156,18 @@ Final handoff: development/compiled/browser test servers and the project-local P
 - Acceptance: T23 startup regression PASS; all existing automated acceptance flows remain passing. No new fresh-install claim.
 - Known issues: explicit `db:generate` still requires stopping the API before replacing a loaded Windows engine. PostgreSQL must be running and initial migration/seed are still explicit setup steps. No dependency or production hosting configuration changes.
 - Next milestone: restart local services in user-owned terminals. Agent-owned development/test servers and the local database helper were stopped after verification so ports are available to the user; stored database files remain intact.
+
+## Render TS2307 missing upload module — 2026-11-12
+
+- Status: PASS locally; hosted redeploy pending.
+- Cause: `.gitignore` used unanchored `uploads/`, ignoring the real source directory `apps/api/src/modules/uploads`. Earlier local builds/tests could read this untracked source, so those results did not establish that the Git snapshot contained all required source files. Render's checkout of `5c4a098` correctly exposed the omission.
+- Implemented/changed files: anchored `.gitignore` runtime paths; added the existing upload route implementation to Git without behavior changes (formatting only); corrected `scripts/check-staged.mjs` to allow source modules while blocking runtime uploads; updated deployment/decisions/traceability/test documentation. No dependencies, database changes, or hosting settings changed.
+- Verification commands and outcomes:
+  - `npm.cmd run build:api`, `npm.cmd run lint`, `npm.cmd run typecheck`: PASS.
+  - `git checkout-index --all --prefix=<isolated .local source directory>/`, linked existing `node_modules`, then `npm.cmd run build:api` from that source export: PASS, including Prisma generation and TypeScript compilation. No `.env` or other untracked application source was copied. This was not a fresh dependency installation or a Linux execution.
+  - `git ls-files apps/api/src/modules/uploads/routes.ts`: source file is tracked in the staged snapshot.
+  - `git ls-files --others --ignored --exclude-standard -- apps/api/src apps/api/prisma apps/web/src packages/shared/src`: no ignored source files remain in these directories.
+  - `git check-ignore -v uploads/example.png apps/api/uploads/example.png`: both runtime paths remain ignored. `node scripts/check-staged.mjs` and staged whitespace checks: PASS.
+- Acceptance: T23 Git source build PASS. Existing upload behavior is unchanged; the previous 24-test/7-E2E results were not rerun for this source-tracking correction.
+- Known issues: Render's actual deployment must be retried with the new commit; no hosted success is claimed.
+- Next milestone: Render Manual Deploy → Deploy latest commit; verify `/health/ready` after startup.

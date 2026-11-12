@@ -104,3 +104,5 @@ git diff --cached --check
 Kết nối Render/Vercel với Git provider repository và branch `main` để các commit tiếp theo kích hoạt build theo cài đặt auto-deploy của từng dịch vụ. Không lưu production secrets trong GitHub repository; nhập trên dashboard của nhà cung cấp.
 
 Tham chiếu: [Vercel programmatic configuration](https://vercel.com/docs/project-configuration/vercel-ts), [Vercel external rewrites/caching](https://vercel.com/docs/routing/rewrites), [Render Web Services](https://render.com/docs/web-services), [Render Blueprint specification](https://render.com/docs/blueprint-spec), [Render persistent disks](https://render.com/docs/disks).
+
+Nếu build commit `5c4a098` báo `TS2307` thiếu `./modules/uploads/routes.js`, chọn **Manual Deploy → Deploy latest commit** sau khi lấy bản sửa mới trên `main`. Nguyên nhân là quy tắc ignore cũ loại nhầm thư mục source upload. Module nay được version trong Git; chỉ các thư mục chứa ảnh runtime bị ignore. Giữ nguyên Build/Start Command và biến môi trường, không cần tự tạo file `.js` hoặc đổi import TypeScript.

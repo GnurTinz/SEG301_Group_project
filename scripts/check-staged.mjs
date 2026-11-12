@@ -9,7 +9,8 @@ const secrets = [local.SESSION_SECRET, local.DEMO_PASSWORD];
 if (local.DATABASE_URL) secrets.push(new URL(local.DATABASE_URL).password);
 for (const file of files) {
   if (
-    /(^|\/)(\.local|node_modules|dist|uploads|test-results)(\/|$)/.test(file) ||
+    /(^|\/)(\.local|node_modules|dist|test-results)(\/|$)/.test(file) ||
+    /^(?:uploads|apps\/api\/uploads)\//.test(file) ||
     (/(^|\/)\.env($|\.)/.test(file) && file !== '.env.example')
   )
     throw new Error(`Generated/private file staged: ${file}`);

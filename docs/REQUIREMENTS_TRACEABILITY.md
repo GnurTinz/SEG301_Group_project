@@ -8,6 +8,8 @@ Local-startup fix on 2026-11-12: T23 now includes automatic Prisma Client genera
 
 Follow-up T23 Windows regression: unconditional generation was replaced by `scripts/prepare-dev.mjs` in root/API `predev`; current generated clients are reused, occupied API/web ports are rejected before generation, and Vite stays on strict port 5173. `apps/api/tests/dev-startup.test.ts` checks real engine-file preservation and occupied API ports. Running duplicate root/API/web commands against an active API was exercised successfully: clear port errors, no EPERM, unchanged engine file, original app still healthy. Current command counts are in TEST_REPORT.md.
 
+Render source-completeness correction: the old unanchored `uploads/` ignore omitted `apps/api/src/modules/uploads/routes.ts` from Git despite local tests passing. The module is now tracked; ignore rules and the staged scanner target runtime upload directories only. T23 was strengthened by exporting all staged Git files to an isolated source directory and successfully running `npm.cmd run build:api` there with existing dependencies linked. This verifies repository source completeness, not a new clean dependency install or a hosted Linux deployment.
+
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
 | ID | Requirement and exact implementation | Executed evidence | Status |

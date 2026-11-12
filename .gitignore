@@ -5,7 +5,9 @@ coverage/
 .env.*
 !.env.example
 .local/
-uploads/
+# Runtime image storage; keep source modules named uploads tracked.
+/uploads/
+/apps/api/uploads/
 playwright-report/
 test-results/
 *.log
