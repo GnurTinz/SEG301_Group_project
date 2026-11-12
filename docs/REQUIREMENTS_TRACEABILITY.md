@@ -4,6 +4,8 @@ Verified locally on 2026-10-31 with real PostgreSQL 18, HTTP API tests and Chrom
 
 Deployment regression on 2026-11-12: all 22 API tests and 7 Chromium flows passed, including five new production configuration/session/readiness/routing checks. Existing T01–T24 coverage remains in the suites; this run did not repeat the original empty-database/clean-install acceptance procedure.
 
+Local-startup fix on 2026-11-12: T23 now includes automatic Prisma Client generation via `apps/api/package.json` → `predev`, reached by both root and API-workspace development commands. An actual uninitialized client was repaired; `npm.cmd run dev` then generated the client automatically and started the API. HTTP checks through Vite and a Chromium homepage smoke passed (10 real article cards), as did all 22 API tests, lint, typecheck and build. No database reset or new clean-install claim.
+
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
 | ID | Requirement and exact implementation | Executed evidence | Status |

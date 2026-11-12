@@ -124,3 +124,18 @@ Final handoff: development/compiled/browser test servers and the project-local P
 - Acceptance: existing T01–T24 regression coverage passes; new evidence strengthens T04/T20/T23. The baseline clean-install/fresh-database gate from 2026-10-31 was not repeated.
 - Known issues: provider deployments require actual account access, URLs and database/secrets configured as documented. Free Render filesystem uploads are temporary; durable uploaded images require separately provisioned storage. Preview domains need separate matching API origin configuration. Single-instance migration/startup and in-memory rate limits remain coursework deployment limits. No production resources or paid services were created.
 - Next milestone: configure hosting environment variables using `docs/DEPLOYMENT.md`, deploy, then perform its live acceptance checklist.
+
+## Local development Prisma Client startup fix — 2026-11-12
+
+- Status: PASS.
+- Implemented: API workspace `predev` runs `npm run db:generate` before `tsx watch`. Root `npm.cmd run dev` delegates to this workspace, so both startup paths generate Prisma Client before importing the database module. Fixed the observed `@prisma/client did not initialize yet` error and its downstream Vite `ECONNREFUSED 127.0.0.1:3001` failures. No database data or schema changes.
+- Changed files: `apps/api/package.json`, `README.md`, `docs/DECISIONS.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/TEST_REPORT.md`.
+- Verification commands and outcomes:
+  - Inspection confirmed the real local `node_modules/.prisma/client/default.js` still contained Prisma's uninitialized stub. `npm.cmd run db:generate`: PASS, Prisma Client 6.19.3 generated. The sandbox's initial engine download failed; approved network execution completed generation successfully.
+  - `npm.cmd run dev`: PASS, logs show API `predev` → `db:generate` → successful generation → `tsx watch` → API listening on port 3001; Vite listening on 5173.
+  - HTTP smoke through `http://localhost:5173`: `/health/ready`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/documents` all returned 200; documents returned ten actual database records. Chromium rendered ten homepage cards without page errors.
+  - `npm.cmd test`: PASS, 9 files / 22 tests (12.41s), using only `portal_test`.
+  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. The two previously documented Rollup annotation warnings remain nonfatal.
+- Acceptance: T01 browser smoke PASS; T23 startup regression PASS. The earlier full 7-flow E2E suite was not rerun for this lifecycle-script change.
+- Known issues: PostgreSQL must still be running and first-time setup still needs explicit migration/seed. Do not run multiple development API instances while regenerating the Windows engine; stop the previous dev command before restarting. Development servers and the project-local database were left running for local access after verification.
+- Next milestone: none for this startup issue; open `http://localhost:5173`. For future starts, run `db:local` and `dev` in separate terminals.

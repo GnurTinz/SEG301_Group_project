@@ -24,6 +24,8 @@ On Unix use `cp .env.example .env` and `npm` instead of `npm.cmd`. Open http://l
 
 If Docker is unavailable, `npm.cmd install`, then `npm.cmd run db:local` starts real PostgreSQL on port 55432 in `.local/`. The helper creates `.env` with random secrets only if it does not exist. Keep the helper running, then migrate/seed/dev in another terminal. Existing `.env` files are preserved; point DATABASE_URL to the helper using the password in ignored `.local/postgres.json`. No system service or OS user is created. This helper is optional test/development tooling.
 
+For an already configured local database, keep `npm.cmd run db:local` running in one terminal and run `npm.cmd run dev` in another. API development startup automatically generates Prisma Client through its `predev` hook, including when started directly with `npm.cmd run dev -w apps/api`. For a first setup, run `npm.cmd run db:generate`, `npm.cmd run db:migrate` and `npm.cmd run db:seed` before starting the website.
+
 ## Demo accounts and sign-in
 
 Anyone cloning this repository runs the application with **their own database and `.env` file**. The `.env` file is excluded from Git, so the project author's local passwords are not shared through the repository.
@@ -90,3 +92,5 @@ SQL ILIKE only. Phase 2 indexing and ranking are intentionally outside this impl
 ## Troubleshooting
 
 PowerShell may block npm.ps1: use npm.cmd. If Docker cannot connect, start Docker Desktop or use db:local. Database connection errors require verifying DATABASE_URL and the running server. Sessions and uploads require writable local storage; uploads are limited to JPEG/PNG/WebP and 5 MB. For production use object storage, HTTPS, backups, external request rate limiting, and explicit trusted proxy configuration.
+
+If the API reports `@prisma/client did not initialize yet`, Prisma Client has not been generated after installing/reinstalling dependencies. Stop the `dev` terminal with Ctrl+C, run `npm.cmd run db:generate`, then restart `npm.cmd run dev`. The API's `predev` hook now performs generation automatically on every development startup. `ECONNREFUSED 127.0.0.1:3001` from Vite is a consequence of the API being stopped; restart the API after fixing the underlying error. Keep the database terminal open.
