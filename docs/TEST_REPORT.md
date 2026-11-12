@@ -139,3 +139,20 @@ Final handoff: development/compiled/browser test servers and the project-local P
 - Acceptance: T01 browser smoke PASS; T23 startup regression PASS. The earlier full 7-flow E2E suite was not rerun for this lifecycle-script change.
 - Known issues: PostgreSQL must still be running and first-time setup still needs explicit migration/seed. Do not run multiple development API instances while regenerating the Windows engine; stop the previous dev command before restarting. Development servers and the project-local database were left running for local access after verification.
 - Next milestone: none for this startup issue; open `http://localhost:5173`. For future starts, run `db:local` and `dev` in separate terminals.
+
+## Windows engine lock / duplicate development startup — 2026-11-12
+
+- Status: PASS. This supersedes the unconditional generation and running-server handoff above.
+- Implemented: `scripts/prepare-dev.mjs` checks ports before changing Prisma files and reuses a valid client when its schema/version/native engine match. Missing/outdated clients are generated before startup. Root `predev` checks API and frontend ports; API workspace `predev` also protects direct startup. Schema comparison ignores Prisma's generated formatting/comments while preserving quoted defaults/mappings. Vite uses strict port 5173, matching the configured local CSRF origin.
+- Cause: the development process left running after the previous verification held port 5173 and the Windows Prisma DLL. Unconditionally generating again tried to replace that loaded DLL and failed with EPERM. Only the agent-owned development session was stopped; unrelated Node processes were not terminated and no generated directories or database data were deleted.
+- Changed files: root/API `package.json`, `scripts/prepare-dev.mjs`, `apps/web/vite.config.ts`, `apps/api/tests/dev-startup.test.ts`, README, decisions, traceability and this report.
+- Verification commands and outcomes:
+  - `node scripts/prepare-dev.mjs --web`: PASS; successful generator execution when preparation identified an outdated client, followed by verified reuse after correcting for Prisma's schema formatting.
+  - `npm.cmd run dev`: PASS; root/API hooks report `Prisma Client is up to date; skipping generation`, then API listens on 3001 and Vite on 5173.
+  - Live duplicate-start smoke: with the real API engine loaded by `/health/ready`, second root/API workspace commands exit 1 with a clear occupied-port message; a second web workspace command exits 1 on port 5173 without switching to 5174. No EPERM occurs, engine modification time stays unchanged, and the original proxied `/health/ready` and `/api/v1/documents` still return 200.
+  - `npm.cmd test`: PASS, 10 files / 24 tests (7.73s), including two subprocess regressions for current-client engine preservation and occupied API port rejection; uses isolated `portal_test`.
+  - `npm.cmd run test:e2e`: PASS, 7/7 Chromium workflows (15.5s).
+  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. Existing harmless Rollup annotation warnings remain.
+- Acceptance: T23 startup regression PASS; all existing automated acceptance flows remain passing. No new fresh-install claim.
+- Known issues: explicit `db:generate` still requires stopping the API before replacing a loaded Windows engine. PostgreSQL must be running and initial migration/seed are still explicit setup steps. No dependency or production hosting configuration changes.
+- Next milestone: restart local services in user-owned terminals. Agent-owned development/test servers and the local database helper were stopped after verification so ports are available to the user; stored database files remain intact.

@@ -1,7 +1,7 @@
 {
   "name": "@portal/api", "private": true, "type": "module", "version": "1.0.0",
   "scripts": {
-    "predev": "npm run db:generate",
+    "predev": "node ../../scripts/prepare-dev.mjs",
     "dev": "tsx watch src/server.ts", "build": "tsc -p tsconfig.json", "start": "node dist/apps/api/src/server.js",
     "typecheck": "tsc --noEmit", "db:generate": "prisma generate",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate deploy",

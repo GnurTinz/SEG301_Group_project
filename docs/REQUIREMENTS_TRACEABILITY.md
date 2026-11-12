@@ -6,6 +6,8 @@ Deployment regression on 2026-11-12: all 22 API tests and 7 Chromium flows passe
 
 Local-startup fix on 2026-11-12: T23 now includes automatic Prisma Client generation via `apps/api/package.json` → `predev`, reached by both root and API-workspace development commands. An actual uninitialized client was repaired; `npm.cmd run dev` then generated the client automatically and started the API. HTTP checks through Vite and a Chromium homepage smoke passed (10 real article cards), as did all 22 API tests, lint, typecheck and build. No database reset or new clean-install claim.
 
+Follow-up T23 Windows regression: unconditional generation was replaced by `scripts/prepare-dev.mjs` in root/API `predev`; current generated clients are reused, occupied API/web ports are rejected before generation, and Vite stays on strict port 5173. `apps/api/tests/dev-startup.test.ts` checks real engine-file preservation and occupied API ports. Running duplicate root/API/web commands against an active API was exercised successfully: clear port errors, no EPERM, unchanged engine file, original app still healthy. Current command counts are in TEST_REPORT.md.
+
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
 | ID | Requirement and exact implementation | Executed evidence | Status |
