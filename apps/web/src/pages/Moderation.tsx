@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, send } from '../api/client';
 import { PermissionGate } from '../layouts/Admin';
@@ -12,8 +13,13 @@ interface Item {
   status: string;
   user?: { username: string };
   reporter?: { username: string };
-  document?: { title: string } | null;
-  comment?: { body: string } | null;
+  document?: { id?: string; title: string; slug?: string } | null;
+  comment?: {
+    id?: string;
+    body: string;
+    status?: string;
+    document?: { id?: string; title: string; slug?: string } | null;
+  } | null;
 }
 export function ModerationPage() {
   const [kind, setKind] = useState<'comments' | 'reports'>('reports');
@@ -28,6 +34,11 @@ export function ModerationPage() {
   const mutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       send(`/moderation/${kind}/${id}${kind === 'comments' ? '/status' : ''}`, 'PATCH', { status }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+  const commentAction = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      send(`/moderation/comments/${id}/status`, 'PATCH', { status }),
     onSuccess: () => qc.invalidateQueries(),
   });
   return (
@@ -74,8 +85,10 @@ export function ModerationPage() {
           ))}
         </select>
       </label>
-      <ErrorNotice error={q.error || mutation.error} />
-      {mutation.isSuccess && <p role="status">Đã cập nhật kiểm duyệt.</p>}
+      <ErrorNotice error={q.error || mutation.error || commentAction.error} />
+      {(mutation.isSuccess || commentAction.isSuccess) && (
+        <p role="status">Đã cập nhật kiểm duyệt.</p>
+      )}
       {q.isPending ? (
         <Loading />
       ) : (
@@ -84,14 +97,28 @@ export function ModerationPage() {
             <article className="panel moderation-item" key={item.id}>
               <div className="section-heading">
                 <strong>
-                  {item.document?.title ?? (kind === 'reports' ? 'Báo cáo bình luận' : 'Bình luận')}
+                  {item.document?.slug ? (
+                    <Link to={`/articles/${item.document.slug}`}>{item.document.title} ↗</Link>
+                  ) : item.comment?.document?.slug ? (
+                    <>
+                      Báo cáo bình luận trong{' '}
+                      <Link to={`/articles/${item.comment.document.slug}`}>
+                        {item.comment.document.title} ↗
+                      </Link>
+                    </>
+                  ) : (
+                    (item.document?.title ??
+                    (kind === 'reports' ? 'Báo cáo bình luận' : 'Bình luận'))
+                  )}
                 </strong>
                 <span className="badge">{item.status}</span>
               </div>
               <p>{item.body ?? item.comment?.body ?? item.reason}</p>
               {item.description && <p>{item.description}</p>}
               <p className="muted">
-                @{item.user?.username ?? item.reporter?.username} · {item.reason}
+                @{item.user?.username ?? item.reporter?.username}
+                {item.reason ? ` · ${item.reason}` : ''}
+                {item.comment?.status ? ` · Bình luận: ${item.comment.status}` : ''}
               </p>
               <div className="actions">
                 {(kind === 'comments'
@@ -107,13 +134,29 @@ export function ModerationPage() {
                 ).map(([value, label]) => (
                   <button
                     className="secondary"
-                    disabled={mutation.isPending || item.status === value}
+                    disabled={
+                      mutation.isPending || commentAction.isPending || item.status === value
+                    }
                     key={value}
                     onClick={() => mutation.mutate({ id: item.id, status: value! })}
                   >
                     {label}
                   </button>
                 ))}
+                {kind === 'reports' && item.comment?.id && (
+                  <button
+                    className="secondary"
+                    disabled={mutation.isPending || commentAction.isPending}
+                    onClick={() =>
+                      commentAction.mutate({
+                        id: item.comment!.id!,
+                        status: item.comment?.status === 'HIDDEN' ? 'VISIBLE' : 'HIDDEN',
+                      })
+                    }
+                  >
+                    {item.comment?.status === 'HIDDEN' ? 'Bỏ ẩn bình luận' : 'Ẩn bình luận'}
+                  </button>
+                )}
               </div>
             </article>
           ))}

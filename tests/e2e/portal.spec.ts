@@ -180,6 +180,9 @@ test('SEO specialist updates metadata and reads activity analytics', async ({ pa
   await page
     .getByRole('textbox', { name: 'Mô tả SEO', exact: true })
     .fill('Mô tả được kiểm chứng qua trình duyệt.');
+  await page
+    .getByRole('textbox', { name: 'Từ khóa SEO', exact: true })
+    .fill('ai, kiem thu, du lieu');
   const saved = page.waitForResponse(
     (r) => r.url().includes('/seo/documents/') && r.request().method() === 'PATCH',
   );
@@ -192,6 +195,10 @@ test('SEO specialist updates metadata and reads activity analytics', async ({ pa
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       'content',
       'Mô tả được kiểm chứng qua trình duyệt.',
+    );
+    await expect(page.locator('meta[name="keywords"]')).toHaveAttribute(
+      'content',
+      'ai, kiem thu, du lieu',
     );
   }
   await page.goto('/admin/analytics');

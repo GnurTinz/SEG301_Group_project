@@ -75,6 +75,13 @@ describe('M5 engagement and moderation', () => {
       ).status,
     ).toBe(409);
     expect((await a.get('/api/v1/moderation/comments')).status).toBe(403);
+    const reports = await mod.get('/api/v1/moderation/reports');
+    expect(reports.status).toBe(200);
+    const foundReport = reports.body.data.find(
+      (item: { id: string }) => item.id === report.body.data.id,
+    );
+    expect(foundReport).toBeDefined();
+    expect(foundReport.comment.document.slug).toBeTruthy();
     expect(
       (
         await mod
@@ -113,6 +120,28 @@ describe('M5 engagement and moderation', () => {
     expect(
       (await a.delete(`/api/v1/comments/${c.id}`).set('X-CSRF-Token', t).send({})).status,
     ).toBe(200);
+    const docReport = await a
+      .post('/api/v1/reports')
+      .set('X-CSRF-Token', t)
+      .send({ documentId, reason: 'MISINFORMATION', description: 'Kiểm tra nguồn dẫn' });
+    expect(docReport.status).toBe(201);
+    const modDocReports = await mod.get('/api/v1/moderation/reports?status=OPEN');
+    expect(modDocReports.status).toBe(200);
+    const foundDocReport = modDocReports.body.data.find(
+      (item: { id: string }) => item.id === docReport.body.data.id,
+    );
+    expect(foundDocReport.document.slug).toBeTruthy();
+    expect(
+      (
+        await mod
+          .patch(`/api/v1/moderation/reports/${docReport.body.data.id}`)
+          .set('X-CSRF-Token', mt)
+          .send({ status: 'DISMISSED' })
+      ).status,
+    ).toBe(200);
+    const { a: seo } = await login('seo');
+    expect((await seo.get('/api/v1/moderation/reports')).status).toBe(403);
+    expect((await other.get('/api/v1/moderation/reports')).status).toBe(403);
   });
   it('T10 likes are idempotent and ratings are bounded and replaceable; guest interaction rejected', async () => {
     const { a, t, user } = await login('user');

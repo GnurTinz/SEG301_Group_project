@@ -20,10 +20,20 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<Enve
     if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   }
   const response = await fetch(`/api/v1${path}`, { ...init, headers, credentials: 'include' });
-  const body = await response.json();
+  const text = await response.text();
+  let body: { error?: { message?: string } } | null;
+  try {
+    body = text ? (JSON.parse(text) as { error?: { message?: string } }) : null;
+  } catch {
+    body = null;
+  }
   if (!response.ok)
-    throw new ApiError(response.status, body.error?.message ?? 'Không thể kết nối máy chủ');
-  return body;
+    throw new ApiError(
+      response.status,
+      body?.error?.message ?? `Không thể kết nối máy chủ (${response.status})`,
+    );
+  if (!body) throw new ApiError(response.status, 'Phản hồi máy chủ không hợp lệ');
+  return body as unknown as Envelope<T>;
 }
 export const send = <T>(path: string, method: string, data: unknown = {}) =>
   api<T>(path, { method, body: JSON.stringify(data) });

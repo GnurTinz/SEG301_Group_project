@@ -92,6 +92,9 @@ describe('Vercel / Render production deployment', () => {
       .set('X-CSRF-Token', freshToken.body.data.csrfToken)
       .send({});
     expect(logout.status).toBe(200);
+    const clearCookies = logout.headers['set-cookie'] as unknown as string[];
+    expect(clearCookies[0]).toMatch(/portal\.sid=;/);
+    expect(clearCookies[0]).toMatch(/; Secure/);
     expect((await httpsGet('/api/v1/auth/me').set('Cookie', cookie)).status).toBe(401);
     expect((await httpsGet('/api/v1/auth/me').set('Cookie', anonymousCookie)).status).toBe(401);
   });

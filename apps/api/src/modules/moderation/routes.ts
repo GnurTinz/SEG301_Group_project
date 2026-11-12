@@ -54,8 +54,15 @@ moderation.get('/reports', requirePermission('moderation.review'), async (req, r
       where,
       include: {
         reporter: { select: { username: true } },
-        document: { select: { title: true } },
-        comment: { select: { body: true } },
+        document: { select: { id: true, title: true, slug: true } },
+        comment: {
+          select: {
+            id: true,
+            body: true,
+            status: true,
+            document: { select: { id: true, title: true, slug: true } },
+          },
+        },
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       skip: (f.page - 1) * f.pageSize,

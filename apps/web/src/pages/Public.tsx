@@ -211,9 +211,22 @@ export function ArticlePage() {
       document.head.append(meta);
     }
     meta.content = d.seoDescription || d.summary;
+    let metaKeywords = document.querySelector<HTMLMetaElement>('meta[name="keywords"]');
+    if (d.seoKeywords) {
+      if (!metaKeywords) {
+        metaKeywords = document.createElement('meta');
+        metaKeywords.name = 'keywords';
+        document.head.append(metaKeywords);
+      }
+      metaKeywords.content = d.seoKeywords;
+    } else if (metaKeywords) {
+      metaKeywords.remove();
+    }
     return () => {
       document.title = 'Điểm Mới — Tạp chí công nghệ';
       meta!.content = 'Tạp chí khoa học, trí tuệ nhân tạo và công nghệ.';
+      const kw = document.querySelector<HTMLMetaElement>('meta[name="keywords"]');
+      if (kw) kw.remove();
     };
   }, [q.data]);
   if (q.isPending) return <Loading />;

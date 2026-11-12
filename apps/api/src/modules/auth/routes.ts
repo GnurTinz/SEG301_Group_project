@@ -3,6 +3,7 @@ import { z } from 'zod';
 import argon2 from 'argon2';
 import type { Request } from 'express';
 import { db } from '../../lib/db.js';
+import { env } from '../../config/env.js';
 import { fail } from '../../lib/http.js';
 import { identity, limiter, requireAuth, token, visitor } from '../../middleware/security.js';
 import { audit } from '../audit/service.js';
@@ -81,7 +82,11 @@ auth.post('/logout', requireAuth, async (req, res) => {
   await new Promise<void>((resolve, reject) =>
     req.session.destroy((e) => (e ? reject(e) : resolve())),
   );
-  res.clearCookie('portal.sid', { httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('portal.sid', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: env.NODE_ENV === 'production',
+  });
   res.json({ data: { success: true } });
 });
 auth.get('/me', requireAuth, (req, res) => res.json({ data: req.identity }));
