@@ -55,7 +55,7 @@ Import **cùng repo GitHub**, chọn Node.js **24.x** và **Root Directory là r
 | Cài đặt | Giá trị |
 |---|---|
 | Framework | Vite |
-| Install Command | `npm ci --include=dev` |
+| Install Command | `npm ci --include=dev --include=optional` |
 | Build Command | `npm run build:web` |
 | Output Directory | `apps/web/dist` |
 
@@ -87,6 +87,8 @@ Database phải được lưu trữ/backup độc lập. Session nằm trong Pos
 Nếu login không giữ phiên: kiểm tra `NODE_ENV=production`, `TRUST_PROXY=1`, HTTPS và cookie trong browser. Nếu mutation trả `CSRF_ORIGIN`: so sánh `Origin` thực tế với `WEB_ORIGIN`, kể cả custom domain. Nếu API trả HTML: kiểm tra Root Directory và rewrites trong `vercel.json`. Nếu readiness 503: kiểm tra database/SSL/network, migration và log Render. Không đăng secrets vào issue/log công khai.
 
 Nếu màn hình New Project báo `rewrites[0] missing required property destination`, tải lại/import lại repo sau khi lấy bản sửa chuyển sang `vercel.json` tĩnh. Phiên bản cấu hình động cũ được giữ tại `docs/vercel-dynamic-config.ts.example` chỉ để tham khảo, không được Vercel nạp. Mỗi rewrite hiện có destination chuỗi literal ngay khi import; không cần đánh giá TypeScript hoặc biến môi trường để xác định URL.
+
+Nếu Vercel báo `@tailwindcss/oxide: Cannot find native binding` khi load Vite config, dùng commit mới đã bổ sung optional dependency `@tailwindcss/oxide-linux-x64-gnu` đúng phiên bản vào manifest/lockfile. Đặt Install Command là `npm ci --include=dev --include=optional`, Node.js 24.x, rồi Redeploy commit mới với build cache tắt. Không xóa lockfile trên máy để chữa lỗi deploy. Khi nâng phiên bản Tailwind/Oxide, cập nhật binary optional Linux tương ứng cùng lúc.
 
 ## 6. GitHub và cập nhật về sau
 

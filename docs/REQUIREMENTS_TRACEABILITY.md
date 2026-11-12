@@ -10,6 +10,8 @@ Follow-up T23 Windows regression: unconditional generation was replaced by `scri
 
 Render source-completeness correction: the old unanchored `uploads/` ignore omitted `apps/api/src/modules/uploads/routes.ts` from Git despite local tests passing. The module is now tracked; ignore rules and the staged scanner target runtime upload directories only. T23 was strengthened by exporting all staged Git files to an isolated source directory and successfully running `npm.cmd run build:api` there with existing dependencies linked. This verifies repository source completeness, not a new clean dependency install or a hosted Linux deployment.
 
+Vercel Linux dependency correction (T23): root manifest/lock explicitly retain `@tailwindcss/oxide-linux-x64-gnu` matching Oxide 4.3.3; Vercel includes optional dependencies and Node is bounded to 24.x. A clean isolated `npm ci` targeting Linux x64/glibc installed the required Oxide, Lightning CSS, esbuild and Rollup binaries. Native Linux execution was not performed on this Windows host; frontend build/lint/typecheck passed locally.
+
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
 | ID | Requirement and exact implementation | Executed evidence | Status |
