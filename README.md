@@ -2,7 +2,7 @@
 
 Phase 1 coursework implementation. Vietnamese UI, React/TypeScript/Vite, Express, PostgreSQL/Prisma, PostgreSQL cookie sessions and database RBAC. Scope and acceptance criteria: IMPLEMENTATION_PLAN.md. Current evidence: [test report](docs/TEST_REPORT.md), [traceability](docs/REQUIREMENTS_TRACEABILITY.md).
 
-**Deploy:** frontend on **Vercel**, Express API on **Render**, PostgreSQL configured through `DATABASE_URL`. Follow the Vietnamese [deployment guide](docs/DEPLOYMENT.md) for dashboard settings, environment variables, migrations/seed, uploads and GitHub auto-deploy. Root configuration: `vercel.ts` and `render.yaml`; both hosting services use the repository root.
+**Deploy:** frontend on **Vercel**, Express API on **Render**, PostgreSQL configured through `DATABASE_URL`. Follow the Vietnamese [deployment guide](docs/DEPLOYMENT.md) for dashboard settings, environment variables, migrations/seed, uploads and GitHub auto-deploy. Root configuration: `vercel.json` and `render.yaml`; both hosting services use the repository root. Vercel rewrites target `https://seg301-group-project.onrender.com`; no frontend environment variable is required.
 
 ## Setup
 

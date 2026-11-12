@@ -171,3 +171,13 @@ Final handoff: development/compiled/browser test servers and the project-local P
 - Acceptance: T23 Git source build PASS. Existing upload behavior is unchanged; the previous 24-test/7-E2E results were not rerun for this source-tracking correction.
 - Known issues: Render's actual deployment must be retried with the new commit; no hosted success is claimed.
 - Next milestone: Render Manual Deploy → Deploy latest commit; verify `/health/ready` after startup.
+
+## Vercel New Project rewrite validation — 2026-11-12
+
+- Status: PASS locally; user must retry the hosted import.
+- Observed: Vercel New Project rejected the dynamic configuration with `rewrites[0] missing required property destination` before build, despite destinations being present after local TypeScript evaluation. The provider's internal parser behavior was not independently diagnosed.
+- Implemented/changed files: replaced active root configuration with static `vercel.json`, using the user-supplied public Render origin `https://seg301-group-project.onrender.com`. Preserved the former `vercel.ts` as `docs/vercel-dynamic-config.ts.example`, outside active configuration names. Updated deployment tests to read the exact JSON artifact and require nonempty literal destinations; removed the TypeScript config include and obsolete frontend environment example; synchronized README/deployment/decisions/traceability. Same-origin sessions, SPA exclusions and no-store API policy are retained. No new dependencies or backend behavior changes.
+- Verification: `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build:web` PASS; `npm.cmd test` PASS (10 files / 24 tests, 7.32s). Each property used in the JSON was validated against its definition in the official `https://openapi.vercel.sh/vercel.json` schema using existing Ajv. Whole-schema meta-validation encountered mixed-draft definitions in unrelated provider Functions options; validation was scoped to the actual configuration keys. No Vercel account deployment was performed and the 7-flow E2E suite was not repeated for this config-only correction.
+- Acceptance: T23 configuration regression PASS locally; provider acceptance pending retry. Database helper used for tests was stopped afterwards, preserving data.
+- Known issues: changing the Render service origin now requires updating the three literal destinations in `vercel.json`; `RENDER_API_ORIGIN` is no longer read. Only the Production frontend origin should be set as Render `WEB_ORIGIN`.
+- Next milestone: re-import latest `main` on Vercel with root `./`, no frontend environment variables; deploy, then update Render `WEB_ORIGIN` to the actual Vercel Production domain.

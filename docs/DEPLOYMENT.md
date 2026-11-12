@@ -50,7 +50,7 @@ Kiểm tra `https://your-api.onrender.com/health/ready` trả `{ "data": { "stat
 
 ## 3. Frontend trên Vercel
 
-Import **cùng repo GitHub**, chọn Node.js **24.x** và **Root Directory là repo root** (không chọn `apps/web`). `vercel.ts` tự cấu hình:
+Import **cùng repo GitHub**, chọn Node.js **24.x** và **Root Directory là repo root** (không chọn `apps/web`). `vercel.json` tự cấu hình:
 
 | Cài đặt | Giá trị |
 |---|---|
@@ -59,7 +59,7 @@ Import **cùng repo GitHub**, chọn Node.js **24.x** và **Root Directory là r
 | Build Command | `npm run build:web` |
 | Output Directory | `apps/web/dist` |
 
-Trong Environment Variables, thêm **`RENDER_API_ORIGIN=https://your-api.onrender.com`** cho Production. Không có `/api`, credentials, query hoặc path trong URL. `vercel.ts` đọc biến này trước build để tạo rewrites, không cần sửa URL trong source. Không đưa `DATABASE_URL`, `SESSION_SECRET` hoặc `DEMO_PASSWORD` lên Vercel. Build frontend không cần database hoặc Prisma Client.
+**Không cần thêm biến môi trường trên Vercel.** `vercel.json` chứa destination tĩnh cho API tại `https://seg301-group-project.onrender.com`, đúng URL Render đã được cung cấp. Nếu trước đó nhập `RENDER_API_ORIGIN`, có thể xóa vì cấu hình hiện tại không sử dụng biến này. Nếu đổi backend, sửa ba destination API/uploads/health trong JSON rồi push GitHub. Không đưa `DATABASE_URL`, `SESSION_SECRET` hoặc `DEMO_PASSWORD` lên Vercel. Build frontend không cần database hoặc Prisma Client.
 
 Deploy frontend, sau đó đặt lại `WEB_ORIGIN` trên Render bằng domain Vercel thực tế nếu trước đó dùng tên dự kiến, rồi redeploy Render. Thay biến Vercel cần redeploy Vercel. Nếu đổi sang custom domain, cập nhật `WEB_ORIGIN` cho khớp origin người dùng truy cập.
 
@@ -84,7 +84,9 @@ Database phải được lưu trữ/backup độc lập. Session nằm trong Pos
 5. Manager tạo draft → publish → guest thấy → unpublish → guest không thấy. Upload ảnh, kiểm tra URL `/uploads/...` qua domain Vercel.
 6. DevTools: request gửi đến domain Vercel; session cookie có HttpOnly, Secure, SameSite=Lax; API response có `Cache-Control: no-store`.
 
-Nếu login không giữ phiên: kiểm tra `NODE_ENV=production`, `TRUST_PROXY=1`, HTTPS và cookie trong browser. Nếu mutation trả `CSRF_ORIGIN`: so sánh `Origin` thực tế với `WEB_ORIGIN`, kể cả custom domain. Nếu API trả HTML: kiểm tra Root Directory và rewrites trong `vercel.ts`. Nếu readiness 503: kiểm tra database/SSL/network, migration và log Render. Không đăng secrets vào issue/log công khai.
+Nếu login không giữ phiên: kiểm tra `NODE_ENV=production`, `TRUST_PROXY=1`, HTTPS và cookie trong browser. Nếu mutation trả `CSRF_ORIGIN`: so sánh `Origin` thực tế với `WEB_ORIGIN`, kể cả custom domain. Nếu API trả HTML: kiểm tra Root Directory và rewrites trong `vercel.json`. Nếu readiness 503: kiểm tra database/SSL/network, migration và log Render. Không đăng secrets vào issue/log công khai.
+
+Nếu màn hình New Project báo `rewrites[0] missing required property destination`, tải lại/import lại repo sau khi lấy bản sửa chuyển sang `vercel.json` tĩnh. Phiên bản cấu hình động cũ được giữ tại `docs/vercel-dynamic-config.ts.example` chỉ để tham khảo, không được Vercel nạp. Mỗi rewrite hiện có destination chuỗi literal ngay khi import; không cần đánh giá TypeScript hoặc biến môi trường để xác định URL.
 
 ## 6. GitHub và cập nhật về sau
 

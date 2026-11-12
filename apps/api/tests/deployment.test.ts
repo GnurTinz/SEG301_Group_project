@@ -1,17 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import config from '../../../vercel.json';
 
 // Import the real app after selecting production settings, including Secure cookies.
 vi.stubEnv('NODE_ENV', 'production');
 vi.stubEnv('DATABASE_URL', process.env.DATABASE_URL!.replace(/^postgresql:/, 'postgres:'));
 vi.stubEnv('WEB_ORIGIN', 'https://portal.example.com');
 vi.stubEnv('TRUST_PROXY', '1');
-vi.stubEnv('RENDER_API_ORIGIN', 'https://portal-api.onrender.com');
 const { app } = await import('../src/app.js');
 const { db, sessionPool } = await import('../src/lib/db.js');
 const { sessionStore } = await import('../src/middleware/security.js');
 const { envSchema } = await import('../src/config/env.js');
-const { config } = await import('../../../vercel.js');
 
 const httpsGet = (path: string) => request(app).get(path).set('X-Forwarded-Proto', 'https');
 const cookieFrom = (response: request.Response) => {
@@ -105,10 +104,23 @@ describe('Vercel / Render production deployment', () => {
   it('resolves the configured API origin before the SPA fallback and disables API caching', () => {
     expect(config.outputDirectory).toBe('apps/web/dist');
     expect(config.rewrites?.slice(0, 3)).toEqual([
-      { source: '/api/:path*', destination: 'https://portal-api.onrender.com/api/:path*' },
-      { source: '/uploads/:path*', destination: 'https://portal-api.onrender.com/uploads/:path*' },
-      { source: '/health/:path*', destination: 'https://portal-api.onrender.com/health/:path*' },
+      {
+        source: '/api/:path*',
+        destination: 'https://seg301-group-project.onrender.com/api/:path*',
+      },
+      {
+        source: '/uploads/:path*',
+        destination: 'https://seg301-group-project.onrender.com/uploads/:path*',
+      },
+      {
+        source: '/health/:path*',
+        destination: 'https://seg301-group-project.onrender.com/health/:path*',
+      },
     ]);
+    for (const rewrite of config.rewrites) {
+      expect(typeof rewrite.destination).toBe('string');
+      expect(rewrite.destination.length).toBeGreaterThan(0);
+    }
     const fallback = config.rewrites?.at(-1);
     expect(fallback?.destination).toBe('/index.html');
     const source = new RegExp(`^${fallback!.source}$`);
