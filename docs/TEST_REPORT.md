@@ -1,193 +1,60 @@
-# Test report
+# Báo cáo kiểm thử
 
-## M0 — Repository audit and contracts
+Báo cáo tổng hợp bằng chứng đã ghi nhận cho sản phẩm Phase 1. Các kết quả dưới đây được giữ từ báo cáo trước khi dọn tài liệu, không phải kết quả chạy lại trong lần chỉnh sửa tài liệu ngày 2026-11-12. Phạm vi từng trường hợp T01–T24 nằm trong [bảng đối chiếu yêu cầu](REQUIREMENTS_TRACEABILITY.md).
 
-- Status: PASS for audit/design; the requested commit gate is closed by the final local implementation snapshot after verification.
-- Implemented: full plan read, clean-repository audit, architecture/ERD, decision log, acceptance checklist.
-- Changed files: docs/AUDIT.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/REQUIREMENTS_TRACEABILITY.md, docs/TEST_REPORT.md.
-- Verification: `git status --short` found only the two supplied documents; `git log -5 --oneline` confirmed no commits; Node v24.18.0 and npm.cmd 11.16.0 available; Docker engine unavailable.
-- Acceptance: T01–T24 not run, no application exists yet.
-- Known issues at initial gate: commit deferred until final source verification; Docker engine absent. The two input documents were preserved.
-- Next milestone: M1 scaffold and infrastructure.
+## Môi trường và phạm vi
 
-## M1 — Scaffold and infrastructure
+- Windows, Node.js 24.x, PostgreSQL 18 chạy bằng công cụ local; Compose cấu hình PostgreSQL 17.
+- API: Vitest và Supertest trên PostgreSQL thật. E2E: Playwright Chromium, gồm viewport mobile 390px.
+- Database kiểm thử tách biệt, tên kết thúc `_test`; runner áp dụng migrations và seed. API và E2E chạy lần lượt.
 
-- Status: PASS using local PostgreSQL; Docker-specific gate unavailable.
-- Implemented: npm workspaces, React/Vite, Express/TypeScript, env validation, ESLint/Prettier, PostgreSQL Compose, CI and health route/test, operational scripts.
-- Changed files: package.json/package-lock.json, apps/* scaffold/config, scripts/local-postgres.mjs, .env.example, docker-compose.yml, eslint.config.js, .github/workflows/ci.yml, README.md, docs/API.md.
-- Verification: `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build` passed; `npm.cmd test` passed 1/1 health test. Local PostgreSQL initialized successfully; first real migrations applied at M2 entry.
-- Acceptance: health 200 via Supertest; T23 scaffold portion verified, full installation/browser verification pending.
-- Known issues: Docker engine absent; Windows restricted token prevents os.userInfo in tsx/local PostgreSQL (run approved commands outside that token). Initial dependency audit reported 19 vulnerabilities; remediation pending before final gate.
-- Next: M2 schema, seed and authentication.
+## Kết quả đã ghi nhận
 
-## M2 — Schema, seed and authentication
+| Hạng mục | Lệnh hoặc phương pháp | Kết quả và thời điểm |
+|---|---|---|
+| Cài dependency sạch | `npm.cmd ci` trong thư mục cách ly chỉ chứa manifest/lock | PASS ngày 2026-10-31: 436 packages, audit không có lỗ hổng |
+| Database mới và seed lặp | `npm.cmd run db:verify-fresh` | PASS ngày 2026-10-31: migrate → seed hai lần → validate → 17/17 API → 7/7 E2E → 17/17 API; database được giữ lại |
+| Kiểm tra corpus | `npm.cmd run db:validate-seed` | PASS ngày 2026-10-31: 80 bài riêng biệt, 72 published, 4 danh mục, 12 thẻ, ít nhất 183 từ/bài; đủ trường bắt buộc và không tăng số lượng khi seed lại |
+| API đầy đủ gần nhất | `npm.cmd test` | PASS ngày 2026-11-12: 10 files, 24/24 tests; lần chạy sau khi đổi cấu hình Vercel mất 7,32 giây |
+| E2E đầy đủ gần nhất | `npm.cmd run test:e2e` | PASS ngày 2026-11-12 sau sửa startup Windows: 7/7 workflows, 15,5 giây |
+| Kiểm tra mã và kiểu | `npm.cmd run lint`, `npm.cmd run typecheck` | PASS ngày 2026-11-12, gồm lần sửa dependency native cho frontend |
+| Build toàn dự án | `npm.cmd run build` | PASS ngày 2026-11-12 sau sửa startup Windows |
+| Build từng ứng dụng | `npm.cmd run build:api`, `npm.cmd run build:web` | PASS cục bộ ngày 2026-11-12; frontend được build lại sau sửa dependency native |
+| Source đủ trong Git | Export Git index sang thư mục cách ly, liên kết dependency có sẵn, chạy `build:api` | PASS ngày 2026-11-12; gồm module upload, không dùng source ngoài Git; không phải cài dependency mới |
+| Dependency cho Linux | `npm ci --include=dev --include=optional --os=linux --cpu=x64 --libc=glibc --ignore-scripts --no-audit` trong thư mục cách ly | PASS ngày 2026-11-12: có binary Oxide, Lightning CSS, esbuild, Rollup; Oxide native khớp 4.3.3. Chọn package Linux trên Windows, không thực thi Linux binary |
+| Dev và bản API build | HTTP/browser smoke, chạy API compiled với cấu hình production và forwarded HTTPS | PASS cục bộ: dữ liệu thật, readiness 200, Secure cookie, API no-store; homepage có 10 bài và không tràn ngang mobile |
+| Startup trùng cổng | Chạy lặp root/API/web khi API đang tải Prisma DLL | PASS ngày 2026-11-12: từ chối cổng bận, không EPERM, DLL không bị thay thế, ứng dụng ban đầu vẫn trả 200 |
+| Docker Compose | `docker compose config --quiet` với biến kiểm tra không nhạy cảm | PASS kiểm tra cấu hình; Docker daemon không chạy trong môi trường xác minh |
 
-- Status: PASS.
-- Implemented: full Prisma schema, two real SQL migrations (including CHECK/partial unique constraints), idempotent five-role demo seed, Argon2id, PostgreSQL cookie sessions, CSRF/session rotation, live RBAC, auth/profile API and React forms.
-- Changed files: apps/api/prisma/*, apps/api/src/{lib,middleware,modules/auth,modules/users,modules/audit}, packages/shared/src/index.ts, apps/web/src/{api,hooks,pages/Account.tsx}, scripts/run-tests.mjs, scripts/run-e2e.mjs, tests/e2e/auth.spec.ts.
-- Verification: migrate succeeded on empty portal and portal_test databases; seed executed twice; lint/typecheck passed after correcting module augmentation and upgrading Zod/resolver; 4/4 API tests passed. `npm.cmd run test:e2e -- tests/e2e/auth.spec.ts`: 1/1 passed (7.1s).
-- Acceptance: T03/T04 PASS; CSRF, profile privacy, mass-assignment rejection and next-request permission changes verified.
-- Known issues: dependency audit remediation continues; production hosting not exercised.
-- Next: M3 content lifecycle.
+Bảy luồng trình duyệt: đăng ký/đăng nhập/hồ sơ/đăng xuất; vòng đời bài viết; tìm kiếm và click; tương tác và kiểm duyệt; tài khoản/quyền/log/cài đặt; SEO và analytics; phân trang và điều hướng mobile theo quyền.
 
-## M3 — Content, taxonomy and upload
+API bao phủ các trường hợp thiếu quyền, quyền sở hữu, thay đổi quyền ngay lập tức, bảo vệ Super Admin cuối cùng kể cả cập nhật đồng thời, CSRF, XSS, SQL injection, giới hạn tần suất, MIME/magic bytes/kích thước upload, ràng buộc database, seed lặp, logging và cấu hình cookie/proxy/readiness.
 
-- Status: PASS (API lifecycle and typed/built editor; broader browser lifecycle is checked at M8).
-- Implemented: draft/create/update/publish/unpublish/soft-delete, taxonomy CRUD, sanitized HTML/plain text, protected editor/list, image upload MIME/magic/size/random path/alt, public visibility and atomic view deduplication.
-- Changed files: modules/documents, modules/categories, modules/tags, modules/uploads, web/pages/ContentAdmin.tsx, web/layouts/Admin.tsx, web/types/content.ts, tests/content.test.ts.
-- Verification: lint/typecheck/build passed. First lifecycle test exposed partial-update defaults clearing tags; fixed optional tagIds, reran `npm.cmd test`: 6/6 passed.
-- Acceptance: T02/T05/T06/T07/T19/T20 API checks PASS. Invalid PNG/SVG uploads rejected; real PNG accepted.
-- Known issues: browser manager lifecycle verification pending at M8.
-- Next: M4 public pages and SQL search.
+## Chạy lại
 
-## M4 — Public frontend and SQL search
+Sau khi cài đặt theo [README](../README.md) và bật database:
 
-- Status: PASS (API; browser search flow checked at M8).
-- Implemented: public home/detail, responsive cards, URL-synchronized keyword/category/tag/date/page/page-size controls, ILIKE through parameterized Prisma contains queries, search/click logging from the first search release.
-- Changed files: modules/search/routes.ts, web/pages/Public.tsx, web/components/Pagination.tsx, web/App.tsx, web/styles.css, tests/search.test.ts.
-- Verification: typecheck/build passed; after connecting routes lint passed. `npm.cmd test`: 8/8 passed, including filtered counts, zero results, SQL injection input, result-membership/foreign-search rejection and no direct-navigation click.
-- Acceptance: T01/T15/T16/T17/T18 PASS at API level.
-- Known issues: full seeded content/browser coverage pending M8.
-- Next: M5 engagement/moderation.
+```powershell
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npx.cmd playwright install chromium
+npm.cmd run test:e2e
+npm.cmd run db:validate-seed
+# Tuỳ chọn: xác minh trên database mới, giữ lại database để kiểm tra
+npm.cmd run db:verify-fresh
+```
 
-## M5 — Engagement and moderation
+## Giới hạn xác minh
 
-- Status: PASS (API; browser moderation checked at M8).
-- Implemented: comments/replies, existing-user mentions, own edit/delete, unique likes, bounded ratings, target-exclusive duplicate-protected reports, moderator status/report queues, audit records and UI.
-- Changed files: modules/{comments,engagement,reports,moderation}, web/components/Engagement.tsx, web/pages/Moderation.tsx, tests/engagement.test.ts.
-- Verification: typecheck/lint/build passed; `npm.cmd test`: 10/10 passed. Hidden/deleted root comments also hide their replies from public results.
-- Acceptance: T08/T09/T10/T11 PASS at API level.
-- Known issues: browser interactions pending M8.
-- Next: M6 analytics and SEO.
+- T01–T24 có bằng chứng PASS cục bộ; quy trình cài sạch/database rỗng được thực hiện ngày 2026-10-31, không lặp lại toàn bộ sau mỗi sửa cấu hình ngày 2026-11-12.
+- Sau sửa dependency native Linux, đã chạy lint/typecheck/build frontend và kiểm tra cài package; không chạy lại API/E2E. Số lượng test trong bảng là bằng chứng lịch sử với phạm vi nêu rõ.
+- Vercel/Render thực tế và GitHub Actions từ xa chưa được xác minh trong các lần chạy được ghi nhận. Cần thực hiện [checklist sau deploy](DEPLOYMENT.md#5-kiểm-tra-sau-deploy) trên môi trường hosting.
+- Hai cảnh báo annotation của Rollup từ Zod không làm build thất bại.
+- Upload dùng ổ đĩa local; rate limit theo bộ nhớ từng instance. Storage bền vững, backup, HTTPS/proxy, shared limiter và lịch dọn log thuộc vận hành hosting.
+- View dùng bucket UTC 30 phút, không phải cửa sổ trượt; CTR là clicks/search và có thể vượt 100%. Lệnh dọn log mặc định chỉ xem trước; không có lịch tự chạy.
 
-## M6 — Logging, analytics and SEO
+## Kiểm tra lần dọn tài liệu — 2026-11-12
 
-- Status: PASS (API; browser SEO/analytics checked at M8).
-- Implemented: linked session-owned search/click events, zero-result logging, transactional view events, real aggregate dashboard/trends/top queries/articles, strict SEO-only endpoint/editor, dynamic title/description and alt rendering.
-- Changed files: modules/{search,analytics,seo}, web/pages/SeoAnalytics.tsx, web/pages/Public.tsx, tests/seo-analytics.test.ts.
-- Verification: typecheck/lint passed; `npm.cmd test`: 11/11 passed, including real count increases and no-data analytics.
-- Acceptance: T12/T16–T19 PASS at API level; signed-in and anonymous logging verified.
-- Known issues: clicks/search CTR can exceed 100% by definition; trends limited to 90 latest active days.
-- Next: M7 Super Admin and permissions.
-
-## M7 — Super Admin and RBAC management
-
-- Status: PASS (API; browser admin flows checked at M8).
-- Implemented: safe paginated users, suspend/activate, multi-role assignment, editable permission matrix, audit filters and whitelist settings. A shared transaction-scoped advisory lock protects administrator changes; SUPER_ADMIN core permissions cannot be removed.
-- Changed files: modules/{users/admin.ts,roles,audit/routes.ts,settings}, web/pages/SuperAdmin.tsx, tests/admin.test.ts.
-- Verification: typecheck/lint passed; initial regression found settings middleware guarding unrelated admin routes, fixed to /settings only. `npm.cmd test`: 14/14 passed.
-- Acceptance: T13/T14/T24 PASS at API level, immediate permission changes and suspended sessions verified.
-- Known issues: browser-wide role navigation and concurrent last-admin stress test pending M8.
-- Next: M8 complete seed, browser tests, polish and documentation.
-
-## M8 — Complete corpus, verification, polish and deliverables
-
-- Status: PASS locally. Hosted CI and production deployment were not run.
-- Implemented: 80 original Vietnamese educational articles (183+ whitespace-separated words each), 72 published/4 draft/4 unpublished, four categories/twelve tags, original local cover illustrations, idempotent demo engagement/reports, seed quality validator, six required browser workflows plus mobile navigation, isolated/fresh database helpers, full documentation and traceability.
-- Changed files: apps/api/prisma/{content,seed.ts,seed-content.ts,validate-seed.ts}, apps/web/public/covers, apps/api/tests/*, tests/e2e/*, scripts/*, root package/TypeScript/Playwright configuration, CI, README and docs/*.md. Prior milestone source files were formatted and final startup/CSRF/upload/date-validation edge cases corrected.
-- Verification commands and outcomes (2026-10-31):
-  - `npm.cmd ci --prefix .local/install-check --fetch-timeout=30000 --fetch-retries=1`: clean isolated dependency installation passed, 436 packages installed, zero audit vulnerabilities. Source manifests/lockfile only copied; no local secrets copied.
-  - `npm.cmd run db:generate`: Prisma 6.19.3 client generated successfully after security overrides.
-  - `npm.cmd run db:migrate`: both committed SQL migrations applied to empty real PostgreSQL databases.
-  - `npm.cmd run db:seed` twice, then `npm.cmd run db:validate-seed`: 80 unique articles, 72 published, four categories, minimum 183 words; stable counts on repeat, required fields present.
-  - `npm.cmd run db:verify-fresh`: fresh portal_verify_1793428774420_test created without deleting existing data; migrate → double seed → corpus validation → 17/17 API tests → 7/7 E2E tests → 17/17 API tests PASS. Machine-readable command statuses retained locally in .local/fresh-verification.json.
-  - Final `npm.cmd run lint`, `npm.cmd run typecheck` (including tests/scripts), `npm.cmd run build`: PASS. Frontend build: 197 modules, approximately 460 kB JS / 142 kB gzip.
-  - Final `npm.cmd test`: 8 files, 17/17 tests PASS (7.09s), including concurrent last-admin suspensions, database CHECKs, rate limits, CSRF/magic bytes/oversize/alt, full category/tag operations and seed idempotency.
-  - Final `npm.cmd run test:e2e`: 7/7 Chromium flows PASS (14.5s): register/login/profile/logout; manager lifecycle; guest filtered search/click; comments/likes/rating/report/moderation; roles/permissions/logs/settings; SEO metadata/rendering/analytics; mobile pagination and role navigation.
-  - `npm.cmd audit`: zero vulnerabilities. Targeted deepmerge-ts 8 and minimatch 11 overrides are reflected in the lockfile; Prisma generation, migrations and runtime tests passed with them.
-  - `npm.cmd run dev` + `node scripts/smoke-local.mjs`: API/web HTTP 200, ten database-backed cards, no browser page errors and no mobile horizontal overflow. Desktop 1440px/mobile 390px screenshots inspected at .local/preview-desktop.png and .local/preview-mobile.png.
-  - `npm.cmd run start -w apps/api`: compiled API starts and /health returns 200; second startup intentionally exits 1 with EADDRINUSE. Fixed the Express startup callback so a bind failure no longer prints success.
-  - Git ignore checks confirm .env, .local credentials/screenshots/databases, node_modules, builds and uploads are excluded. No remote push/deployment performed.
-  - `docker compose config --quiet` with non-sensitive validation environment values: PASS; Docker engine was not started.
-  - Local implementation commits: a1c0b01 (application and verification) and b03f770 (Compose). Staged-file scans passed for private paths and configured local secrets. The original implementation plan's intentional Markdown hard-break whitespace was preserved; new-source whitespace checks passed.
-- Acceptance: T01–T24 PASS locally with exact implementation/test mapping in REQUIREMENTS_TRACEABILITY.md.
-- Resolved verification failures: Zod partial defaults clearing tags; overly broad settings authorization; browser label selectors; browser test state/restoration timing; dependency lock retaining a vulnerable nested package; compiled start collision falsely reporting success. All affected checks rerun successfully.
-- Known issues/limits: Docker CLI exists but daemon is unavailable; PostgreSQL 18 local process used instead of Compose 17. GitHub Actions is configured, not remotely executed. Rollup prints two harmless annotation warnings from Zod. Uploads use local disk; horizontal production rate limiting, HTTPS/reverse proxy, object storage, backups and operator-scheduled retention remain deployment responsibilities. View deduplication uses aligned 30-minute buckets; analytics CTR may exceed 100% by documented definition. Retention pruning was not applied.
-- Next milestone: none in Phase 1; review the local implementation and PHASE2_HANDOFF.md. Phase 2 search/index/ranking is not implemented.
-
-Final handoff: development/compiled/browser test servers and the project-local PostgreSQL process were stopped. Database files, random local .env credentials and inspected screenshots remain in ignored paths. Restart `npm.cmd run db:local`, then `npm.cmd run dev` in another terminal. No database was dropped or reset.
-
-## Deployment preparation — 2026-11-12
-
-- Status: PASS for local configuration/build/regression verification; hosted Vercel/Render deployment has not been executed.
-- Implemented: Vercel environment-driven same-origin API/upload/health rewrites and SPA deep links; Render free-service blueprint with environment-provided database; independent web/API builds; migration → idempotent seed → startup; `0.0.0.0` binding and configurable proxy trust; PostgreSQL URL compatibility; HTTPS production origin validation; no-store API responses; database readiness endpoint. No schema changes or Phase 2 search work.
-- Changed files: `vercel.ts`, `render.yaml`, `.env.example`, `.gitignore`, root `package.json`/test TypeScript configuration, API `app.ts`/`server.ts`/`config/env.ts`, `apps/api/tests/deployment.test.ts`, README and deployment/API/decisions/traceability/handoff documentation. No dependency changes were retained.
-- Verification commands and outcomes:
-  - `npm.cmd run build:api`: PASS, Prisma Client generated and API compiled.
-  - `npm.cmd run build:web`: PASS independently of an API/database build, 197 modules.
-  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. Existing two Rollup annotation warnings remain nonfatal.
-  - `npm.cmd test`: PASS, 9 files / 22 tests; final run 7.76s. Tests use only isolated `portal_test`, with existing migrations applied and idempotent seed. Five new deployment tests exercise real production Secure cookies behind forwarded HTTPS, session rotation and invalidation, wrong-origin/token CSRF rejection, no Secure cookie on plain HTTP, real `postgres://` Prisma/session connectivity, invalid environment settings, readiness success/503 without private details, API rewrites and SPA exclusions/cache policy.
-  - `npm.cmd run test:e2e`: PASS, 7/7 Chromium flows (14.8s): auth/profile, manager lifecycle, search/click, engagement/moderation, administrative roles/settings, SEO/analytics and mobile navigation.
-  - Compiled server smoke: spawned `node apps/api/dist/apps/api/src/server.js` with production settings, `HOST=0.0.0.0`, `PORT=3331`, `TRUST_PROXY=1`, HTTPS origin and the isolated test database. PASS: startup binding, `/health/ready` 200, forwarded-HTTPS Secure cookie and API no-store; child process stopped afterwards.
-  - `npm.cmd audit --audit-level=high`: PASS, zero vulnerabilities. A trial of the optional Vercel SDK introduced vulnerable transitive packages; the SDK was removed and no dependency or lockfile content change remains. `vercel.ts` uses the documented plain config export.
-  - Sandbox initially blocked Node `os.userInfo` and registry access; PostgreSQL/API/browser verification and audit succeeded under approved execution outside that restriction. No source workaround or interpreter change was introduced.
-- Acceptance: existing T01–T24 regression coverage passes; new evidence strengthens T04/T20/T23. The baseline clean-install/fresh-database gate from 2026-10-31 was not repeated.
-- Known issues: provider deployments require actual account access, URLs and database/secrets configured as documented. Free Render filesystem uploads are temporary; durable uploaded images require separately provisioned storage. Preview domains need separate matching API origin configuration. Single-instance migration/startup and in-memory rate limits remain coursework deployment limits. No production resources or paid services were created.
-- Next milestone: configure hosting environment variables using `docs/DEPLOYMENT.md`, deploy, then perform its live acceptance checklist.
-
-## Local development Prisma Client startup fix — 2026-11-12
-
-- Status: PASS.
-- Implemented: API workspace `predev` runs `npm run db:generate` before `tsx watch`. Root `npm.cmd run dev` delegates to this workspace, so both startup paths generate Prisma Client before importing the database module. Fixed the observed `@prisma/client did not initialize yet` error and its downstream Vite `ECONNREFUSED 127.0.0.1:3001` failures. No database data or schema changes.
-- Changed files: `apps/api/package.json`, `README.md`, `docs/DECISIONS.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/TEST_REPORT.md`.
-- Verification commands and outcomes:
-  - Inspection confirmed the real local `node_modules/.prisma/client/default.js` still contained Prisma's uninitialized stub. `npm.cmd run db:generate`: PASS, Prisma Client 6.19.3 generated. The sandbox's initial engine download failed; approved network execution completed generation successfully.
-  - `npm.cmd run dev`: PASS, logs show API `predev` → `db:generate` → successful generation → `tsx watch` → API listening on port 3001; Vite listening on 5173.
-  - HTTP smoke through `http://localhost:5173`: `/health/ready`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/documents` all returned 200; documents returned ten actual database records. Chromium rendered ten homepage cards without page errors.
-  - `npm.cmd test`: PASS, 9 files / 22 tests (12.41s), using only `portal_test`.
-  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. The two previously documented Rollup annotation warnings remain nonfatal.
-- Acceptance: T01 browser smoke PASS; T23 startup regression PASS. The earlier full 7-flow E2E suite was not rerun for this lifecycle-script change.
-- Known issues: PostgreSQL must still be running and first-time setup still needs explicit migration/seed. Do not run multiple development API instances while regenerating the Windows engine; stop the previous dev command before restarting. Development servers and the project-local database were left running for local access after verification.
-- Next milestone: none for this startup issue; open `http://localhost:5173`. For future starts, run `db:local` and `dev` in separate terminals.
-
-## Windows engine lock / duplicate development startup — 2026-11-12
-
-- Status: PASS. This supersedes the unconditional generation and running-server handoff above.
-- Implemented: `scripts/prepare-dev.mjs` checks ports before changing Prisma files and reuses a valid client when its schema/version/native engine match. Missing/outdated clients are generated before startup. Root `predev` checks API and frontend ports; API workspace `predev` also protects direct startup. Schema comparison ignores Prisma's generated formatting/comments while preserving quoted defaults/mappings. Vite uses strict port 5173, matching the configured local CSRF origin.
-- Cause: the development process left running after the previous verification held port 5173 and the Windows Prisma DLL. Unconditionally generating again tried to replace that loaded DLL and failed with EPERM. Only the agent-owned development session was stopped; unrelated Node processes were not terminated and no generated directories or database data were deleted.
-- Changed files: root/API `package.json`, `scripts/prepare-dev.mjs`, `apps/web/vite.config.ts`, `apps/api/tests/dev-startup.test.ts`, README, decisions, traceability and this report.
-- Verification commands and outcomes:
-  - `node scripts/prepare-dev.mjs --web`: PASS; successful generator execution when preparation identified an outdated client, followed by verified reuse after correcting for Prisma's schema formatting.
-  - `npm.cmd run dev`: PASS; root/API hooks report `Prisma Client is up to date; skipping generation`, then API listens on 3001 and Vite on 5173.
-  - Live duplicate-start smoke: with the real API engine loaded by `/health/ready`, second root/API workspace commands exit 1 with a clear occupied-port message; a second web workspace command exits 1 on port 5173 without switching to 5174. No EPERM occurs, engine modification time stays unchanged, and the original proxied `/health/ready` and `/api/v1/documents` still return 200.
-  - `npm.cmd test`: PASS, 10 files / 24 tests (7.73s), including two subprocess regressions for current-client engine preservation and occupied API port rejection; uses isolated `portal_test`.
-  - `npm.cmd run test:e2e`: PASS, 7/7 Chromium workflows (15.5s).
-  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. Existing harmless Rollup annotation warnings remain.
-- Acceptance: T23 startup regression PASS; all existing automated acceptance flows remain passing. No new fresh-install claim.
-- Known issues: explicit `db:generate` still requires stopping the API before replacing a loaded Windows engine. PostgreSQL must be running and initial migration/seed are still explicit setup steps. No dependency or production hosting configuration changes.
-- Next milestone: restart local services in user-owned terminals. Agent-owned development/test servers and the local database helper were stopped after verification so ports are available to the user; stored database files remain intact.
-
-## Render TS2307 missing upload module — 2026-11-12
-
-- Status: PASS locally; hosted redeploy pending.
-- Cause: `.gitignore` used unanchored `uploads/`, ignoring the real source directory `apps/api/src/modules/uploads`. Earlier local builds/tests could read this untracked source, so those results did not establish that the Git snapshot contained all required source files. Render's checkout of `5c4a098` correctly exposed the omission.
-- Implemented/changed files: anchored `.gitignore` runtime paths; added the existing upload route implementation to Git without behavior changes (formatting only); corrected `scripts/check-staged.mjs` to allow source modules while blocking runtime uploads; updated deployment/decisions/traceability/test documentation. No dependencies, database changes, or hosting settings changed.
-- Verification commands and outcomes:
-  - `npm.cmd run build:api`, `npm.cmd run lint`, `npm.cmd run typecheck`: PASS.
-  - `git checkout-index --all --prefix=<isolated .local source directory>/`, linked existing `node_modules`, then `npm.cmd run build:api` from that source export: PASS, including Prisma generation and TypeScript compilation. No `.env` or other untracked application source was copied. This was not a fresh dependency installation or a Linux execution.
-  - `git ls-files apps/api/src/modules/uploads/routes.ts`: source file is tracked in the staged snapshot.
-  - `git ls-files --others --ignored --exclude-standard -- apps/api/src apps/api/prisma apps/web/src packages/shared/src`: no ignored source files remain in these directories.
-  - `git check-ignore -v uploads/example.png apps/api/uploads/example.png`: both runtime paths remain ignored. `node scripts/check-staged.mjs` and staged whitespace checks: PASS.
-- Acceptance: T23 Git source build PASS. Existing upload behavior is unchanged; the previous 24-test/7-E2E results were not rerun for this source-tracking correction.
-- Known issues: Render's actual deployment must be retried with the new commit; no hosted success is claimed.
-- Next milestone: Render Manual Deploy → Deploy latest commit; verify `/health/ready` after startup.
-
-## Vercel New Project rewrite validation — 2026-11-12
-
-- Status: PASS locally; user must retry the hosted import.
-- Observed: Vercel New Project rejected the dynamic configuration with `rewrites[0] missing required property destination` before build, despite destinations being present after local TypeScript evaluation. The provider's internal parser behavior was not independently diagnosed.
-- Implemented/changed files: replaced active root configuration with static `vercel.json`, using the user-supplied public Render origin `https://seg301-group-project.onrender.com`. Preserved the former `vercel.ts` as `docs/vercel-dynamic-config.ts.example`, outside active configuration names. Updated deployment tests to read the exact JSON artifact and require nonempty literal destinations; removed the TypeScript config include and obsolete frontend environment example; synchronized README/deployment/decisions/traceability. Same-origin sessions, SPA exclusions and no-store API policy are retained. No new dependencies or backend behavior changes.
-- Verification: `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build:web` PASS; `npm.cmd test` PASS (10 files / 24 tests, 7.32s). Each property used in the JSON was validated against its definition in the official `https://openapi.vercel.sh/vercel.json` schema using existing Ajv. Whole-schema meta-validation encountered mixed-draft definitions in unrelated provider Functions options; validation was scoped to the actual configuration keys. No Vercel account deployment was performed and the 7-flow E2E suite was not repeated for this config-only correction.
-- Acceptance: T23 configuration regression PASS locally; provider acceptance pending retry. Database helper used for tests was stopped afterwards, preserving data.
-- Known issues: changing the Render service origin now requires updating the three literal destinations in `vercel.json`; `RENDER_API_ORIGIN` is no longer read. Only the Production frontend origin should be set as Render `WEB_ORIGIN`.
-- Next milestone: re-import latest `main` on Vercel with root `./`, no frontend environment variables; deploy, then update Render `WEB_ORIGIN` to the actual Vercel Production domain.
-
-## Vercel Linux Tailwind native binding — 2026-11-12
-
-- Status: PASS for lock/install verification and local frontend build; hosted Linux rebuild pending.
-- Cause: the lockfile listed Oxide 4.3.3's Linux optional dependency in its parent metadata but contained only the Windows binary package entry. Vercel installed successfully, then loading the Tailwind plugin failed because the Linux native module was missing.
-- Implemented/changed files: root `package.json`/`package-lock.json` explicitly retain exact-version `@tailwindcss/oxide-linux-x64-gnu@4.3.3` as optional; `vercel.json` adds `--include=optional`; root Node engines now use `24.x`. Deployment/decisions/traceability documentation updated. Existing dependency versions remain unchanged.
-- Verification: `npm install --save-optional --save-exact @tailwindcss/oxide-linux-x64-gnu@4.3.3 --package-lock-only --ignore-scripts --include=optional` succeeded, zero audit vulnerabilities. In a new isolated directory containing only manifests/lock, `npm ci --include=dev --include=optional --os=linux --cpu=x64 --libc=glibc --ignore-scripts --no-audit` installed 436 packages successfully. Verified actual Linux native artifacts for Oxide, Lightning CSS, esbuild and Rollup, plus exact parent/native Oxide version equality. `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build:web` PASS; existing Rollup annotation warnings remain nonfatal.
-- Limits: the install check targets Linux package selection but runs on Windows and skips install scripts; it does not execute Linux binaries. Docker daemon was unavailable. API/E2E suites were not rerun for this optional-dependency/config-only fix; their previous counts remain historical. No user node_modules, original lockfile, database or services were deleted.
-- Acceptance: T23 dependency completeness verified for the deployment target; actual Vercel success requires redeploying the latest commit. When upgrading Oxide, keep the optional native pin synchronized.
-- Next milestone: Vercel Redeploy latest commit with build cache disabled and Install Command `npm ci --include=dev --include=optional`.
+Không thay đổi source, migrations, seed, tests, dependency hoặc cấu hình runtime. PASS: 17 liên kết/anchor nội bộ và 14 lệnh `npm run` trong README hợp lệ; không còn tham chiếu tới tài liệu đã xoá. Còn 7 file Markdown. Git diff chỉ gồm tài liệu và kiểm tra whitespace không báo lỗi. Không chạy lại build/API/E2E trong lần này vì chỉ sửa tài liệu và workspace chưa có `node_modules`.

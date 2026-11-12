@@ -1,16 +1,6 @@
 # Requirement traceability
 
-Verified locally on 2026-10-31 with real PostgreSQL 18, HTTP API tests and Chromium browser tests. PASS describes the stated acceptance scenario, not a claim of exhaustive security or production certification. Command evidence and milestone reports: TEST_REPORT.md.
-
-Deployment regression on 2026-11-12: all 22 API tests and 7 Chromium flows passed, including five new production configuration/session/readiness/routing checks. Existing T01–T24 coverage remains in the suites; this run did not repeat the original empty-database/clean-install acceptance procedure.
-
-Local-startup fix on 2026-11-12: T23 now includes automatic Prisma Client generation via `apps/api/package.json` → `predev`, reached by both root and API-workspace development commands. An actual uninitialized client was repaired; `npm.cmd run dev` then generated the client automatically and started the API. HTTP checks through Vite and a Chromium homepage smoke passed (10 real article cards), as did all 22 API tests, lint, typecheck and build. No database reset or new clean-install claim.
-
-Follow-up T23 Windows regression: unconditional generation was replaced by `scripts/prepare-dev.mjs` in root/API `predev`; current generated clients are reused, occupied API/web ports are rejected before generation, and Vite stays on strict port 5173. `apps/api/tests/dev-startup.test.ts` checks real engine-file preservation and occupied API ports. Running duplicate root/API/web commands against an active API was exercised successfully: clear port errors, no EPERM, unchanged engine file, original app still healthy. Current command counts are in TEST_REPORT.md.
-
-Render source-completeness correction: the old unanchored `uploads/` ignore omitted `apps/api/src/modules/uploads/routes.ts` from Git despite local tests passing. The module is now tracked; ignore rules and the staged scanner target runtime upload directories only. T23 was strengthened by exporting all staged Git files to an isolated source directory and successfully running `npm.cmd run build:api` there with existing dependencies linked. This verifies repository source completeness, not a new clean dependency install or a hosted Linux deployment.
-
-Vercel Linux dependency correction (T23): root manifest/lock explicitly retain `@tailwindcss/oxide-linux-x64-gnu` matching Oxide 4.3.3; Vercel includes optional dependencies and Node is bounded to 24.x. A clean isolated `npm ci` targeting Linux x64/glibc installed the required Oxide, Lightning CSS, esbuild and Rollup binaries. Native Linux execution was not performed on this Windows host; frontend build/lint/typecheck passed locally.
+T01–T24 map the delivered Phase 1 behavior to implementation and executed tests. The original acceptance run was recorded on 2026-10-31 with real PostgreSQL 18 and Chromium; regression verification was recorded on 2026-11-12. PASS refers to the stated scenario within that environment. Test dates, counts, commands and verification limits are consolidated in the [test report](TEST_REPORT.md); the documentation cleanup did not rerun application tests.
 
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
@@ -41,6 +31,15 @@ API paths below use `/api/v1`. Source module paths are relative to `apps/api/src
 | T23 | real SQL migrations, workspace scripts, Docker Compose, CI, README | clean isolated `npm ci`; fresh DB migrate/seed twice/validate; 17 API + 7 E2E + 17 API; lint/typecheck/build; actual dev HTTP/browser smoke | PASS locally |
 | T24 | `audit/routes.ts`, `settings/routes.ts`, `users/admin.ts`, `pages/SuperAdmin.tsx` | `admin.test.ts`: audit filter/settings whitelist and USER 403; browser roles/logs/settings | PASS |
 
-Deployment mapping: T04/T20 → `apps/api/tests/deployment.test.ts` exercises Secure cookie rotation/login/logout and exact-origin CSRF behind TLS termination; T16–T19 → API no-store headers preserve server-side event handling; T23 → `vercel.json`, `render.yaml`, root build/start scripts and `docs/DEPLOYMENT.md`. Independent web/API builds and the compiled production server were executed locally. Vercel import correction uses static literal destinations in JSON, with tests reading that exact artifact. Hosted frontend deployment remains unverified until the user retries import.
+Additional deployment/startup coverage:
 
-Environment limits: Docker engine unavailable (local real PostgreSQL used); GitHub Actions is configured but was not remotely executed during the baseline verification. M0's requested commit gate is closed by the final verified local implementation snapshot. GitHub delivery is tracked separately from runtime deployment.
+| Scope | Implementation and evidence |
+|---|---|
+| T04/T20: production sessions and CSRF | `apps/api/tests/deployment.test.ts`: Secure cookie rotation/logout behind TLS termination, exact-origin CSRF, invalid environment settings, database URL compatibility and readiness responses |
+| T16–T19: server event handling | API no-store responses and same-origin Vercel proxy preserve backend search/view logging |
+| T23: Windows startup | `scripts/prepare-dev.mjs`, root/API predev and strict Vite port; `apps/api/tests/dev-startup.test.ts` verifies client engine preservation and occupied ports; live duplicate starts also checked |
+| T23: source completeness | Upload route tracked in Git; runtime upload ignores anchored; API built successfully from isolated Git source export with existing dependencies linked |
+| T23: hosting configuration | `vercel.json`, `render.yaml`, build/start scripts and [hosting guide](DEPLOYMENT.md); tests inspect the actual static rewrite destinations |
+| T23: Linux dependency completeness | Root optional Oxide pin matches 4.3.3; isolated Linux-targeted npm install on Windows verified Oxide, Lightning CSS, esbuild and Rollup packages; local frontend build passed |
+
+Docker engine, remote CI, hosted Vercel/Render acceptance and execution of Linux binaries were not verified by these local checks. Clean-install/fresh-database evidence dates to 2026-10-31; later configuration checks do not establish a new full fresh-install run.
