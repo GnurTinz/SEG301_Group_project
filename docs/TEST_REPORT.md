@@ -106,3 +106,21 @@
 - Next milestone: none in Phase 1; review the local implementation and PHASE2_HANDOFF.md. Phase 2 search/index/ranking is not implemented.
 
 Final handoff: development/compiled/browser test servers and the project-local PostgreSQL process were stopped. Database files, random local .env credentials and inspected screenshots remain in ignored paths. Restart `npm.cmd run db:local`, then `npm.cmd run dev` in another terminal. No database was dropped or reset.
+
+## Deployment preparation — 2026-11-12
+
+- Status: PASS for local configuration/build/regression verification; hosted Vercel/Render deployment has not been executed.
+- Implemented: Vercel environment-driven same-origin API/upload/health rewrites and SPA deep links; Render free-service blueprint with environment-provided database; independent web/API builds; migration → idempotent seed → startup; `0.0.0.0` binding and configurable proxy trust; PostgreSQL URL compatibility; HTTPS production origin validation; no-store API responses; database readiness endpoint. No schema changes or Phase 2 search work.
+- Changed files: `vercel.ts`, `render.yaml`, `.env.example`, `.gitignore`, root `package.json`/test TypeScript configuration, API `app.ts`/`server.ts`/`config/env.ts`, `apps/api/tests/deployment.test.ts`, README and deployment/API/decisions/traceability/handoff documentation. No dependency changes were retained.
+- Verification commands and outcomes:
+  - `npm.cmd run build:api`: PASS, Prisma Client generated and API compiled.
+  - `npm.cmd run build:web`: PASS independently of an API/database build, 197 modules.
+  - `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`: PASS. Existing two Rollup annotation warnings remain nonfatal.
+  - `npm.cmd test`: PASS, 9 files / 22 tests; final run 7.76s. Tests use only isolated `portal_test`, with existing migrations applied and idempotent seed. Five new deployment tests exercise real production Secure cookies behind forwarded HTTPS, session rotation and invalidation, wrong-origin/token CSRF rejection, no Secure cookie on plain HTTP, real `postgres://` Prisma/session connectivity, invalid environment settings, readiness success/503 without private details, API rewrites and SPA exclusions/cache policy.
+  - `npm.cmd run test:e2e`: PASS, 7/7 Chromium flows (14.8s): auth/profile, manager lifecycle, search/click, engagement/moderation, administrative roles/settings, SEO/analytics and mobile navigation.
+  - Compiled server smoke: spawned `node apps/api/dist/apps/api/src/server.js` with production settings, `HOST=0.0.0.0`, `PORT=3331`, `TRUST_PROXY=1`, HTTPS origin and the isolated test database. PASS: startup binding, `/health/ready` 200, forwarded-HTTPS Secure cookie and API no-store; child process stopped afterwards.
+  - `npm.cmd audit --audit-level=high`: PASS, zero vulnerabilities. A trial of the optional Vercel SDK introduced vulnerable transitive packages; the SDK was removed and no dependency or lockfile content change remains. `vercel.ts` uses the documented plain config export.
+  - Sandbox initially blocked Node `os.userInfo` and registry access; PostgreSQL/API/browser verification and audit succeeded under approved execution outside that restriction. No source workaround or interpreter change was introduced.
+- Acceptance: existing T01–T24 regression coverage passes; new evidence strengthens T04/T20/T23. The baseline clean-install/fresh-database gate from 2026-10-31 was not repeated.
+- Known issues: provider deployments require actual account access, URLs and database/secrets configured as documented. Free Render filesystem uploads are temporary; durable uploaded images require separately provisioned storage. Preview domains need separate matching API origin configuration. Single-instance migration/startup and in-memory rate limits remain coursework deployment limits. No production resources or paid services were created.
+- Next milestone: configure hosting environment variables using `docs/DEPLOYMENT.md`, deploy, then perform its live acceptance checklist.

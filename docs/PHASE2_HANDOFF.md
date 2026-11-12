@@ -2,6 +2,8 @@
 
 Phase 1 uses PostgreSQL ILIKE only; no tokenizer, inverted index, TF-IDF, BM25, embeddings or ranking service.
 
+Hosting preparation adds Vercel same-origin proxying to a Render API without changing the schema or event contract. API responses are `no-store` so every search/detail request still reaches the backend and records its event. Keep these semantics when adding Phase 2 caching. See [deployment guide](DEPLOYMENT.md); uploaded files need durable storage separately from the database.
+
 `documents` contains required `id`, `title`, `content`, `summary`, `category_id`, `author`, `created_at`, `views_count`. `content` is sanitized HTML; `content_plain` is derived Unicode plain text without script/style contents, preserving Vietnamese accents. `author` is a display snapshot; nullable `author_id` links an account. Only PUBLISHED, non-deleted documents belong in a future public index. Taxonomy uses categories and document_tags. Timestamp columns use timestamptz and UTC.
 
 `search_click_logs` contains `id`, nullable `user_id`, `query_string`, nullable `clicked_doc_id`, `timestamp`, `event_type`, nullable self-referencing `search_id`, page, position, filters_json and result_count. SEARCH rows have no clicked document or parent search. Every successful validated search request creates one SEARCH row, including zero results. CLICK rows copy query and filters from their parent, have a published clicked document and validated result membership. Direct home/detail navigation creates no search click. Anonymous linkage uses a random session owner identifier and never email/IP. Filters include category/tag/date and the ordered page result IDs needed to verify clicks.

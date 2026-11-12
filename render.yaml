@@ -1,0 +1,28 @@
+# Repository root is required: this project uses npm workspaces.
+services:
+  - type: web
+    name: seg301-portal-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: npm run start:render
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: 1
+      - key: WEB_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/storage/uploads

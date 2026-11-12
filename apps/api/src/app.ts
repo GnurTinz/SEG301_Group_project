@@ -24,6 +24,8 @@ import { settings } from './modules/settings/routes.js';
 import { db } from './lib/db.js';
 export const app = express();
 app.disable('x-powered-by');
+// Render terminates TLS before forwarding requests to Express.
+app.set('trust proxy', env.TRUST_PROXY);
 app.use(helmet());
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
@@ -37,7 +39,20 @@ app.use(
     },
   }),
 );
+app.use(['/api', '/health'], (_req, res, next) => {
+  // Searches/views have side effects and sessions must never be shared by a CDN.
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.get('/health', (_req, res) => res.json({ data: { status: 'ok' } }));
+app.get('/health/ready', async (_req, res) => {
+  try {
+    await db.$queryRaw`SELECT 1`;
+    res.json({ data: { status: 'ready' } });
+  } catch {
+    res.status(503).json({ error: { code: 'NOT_READY', message: 'Database unavailable' } });
+  }
+});
 app.use('/api/v1', limiter(300), sessionMiddleware, loadIdentity, csrf);
 app.use('/api/v1/auth', auth);
 app.use('/api/v1/users', users);

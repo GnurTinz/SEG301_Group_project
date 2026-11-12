@@ -2,6 +2,8 @@
 
 Verified locally on 2026-10-31 with real PostgreSQL 18, HTTP API tests and Chromium browser tests. PASS describes the stated acceptance scenario, not a claim of exhaustive security or production certification. Command evidence and milestone reports: TEST_REPORT.md.
 
+Deployment regression on 2026-11-12: all 22 API tests and 7 Chromium flows passed, including five new production configuration/session/readiness/routing checks. Existing T01–T24 coverage remains in the suites; this run did not repeat the original empty-database/clean-install acceptance procedure.
+
 API paths below use `/api/v1`. Source module paths are relative to `apps/api/src/modules/`; browser pages are under `apps/web/src/`.
 
 | ID | Requirement and exact implementation | Executed evidence | Status |
@@ -31,4 +33,6 @@ API paths below use `/api/v1`. Source module paths are relative to `apps/api/src
 | T23 | real SQL migrations, workspace scripts, Docker Compose, CI, README | clean isolated `npm ci`; fresh DB migrate/seed twice/validate; 17 API + 7 E2E + 17 API; lint/typecheck/build; actual dev HTTP/browser smoke | PASS locally |
 | T24 | `audit/routes.ts`, `settings/routes.ts`, `users/admin.ts`, `pages/SuperAdmin.tsx` | `admin.test.ts`: audit filter/settings whitelist and USER 403; browser roles/logs/settings | PASS |
 
-Environment limits: Docker engine unavailable (local real PostgreSQL used); GitHub Actions is configured but has not run remotely; no deployment/push. M0's requested commit gate is closed by the final verified local implementation snapshot.
+Deployment mapping: T04/T20 → `apps/api/tests/deployment.test.ts` exercises Secure cookie rotation/login/logout and exact-origin CSRF behind TLS termination; T16–T19 → API no-store headers preserve server-side event handling; T23 → `vercel.ts`, `render.yaml`, root build/start scripts and `docs/DEPLOYMENT.md`. Independent web/API builds and the compiled production server were executed locally. Hosted provider deployment remains unverified until account environment variables/database are configured.
+
+Environment limits: Docker engine unavailable (local real PostgreSQL used); GitHub Actions is configured but was not remotely executed during the baseline verification. M0's requested commit gate is closed by the final verified local implementation snapshot. GitHub delivery is tracked separately from runtime deployment.

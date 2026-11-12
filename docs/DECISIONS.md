@@ -1,6 +1,6 @@
 # Implementation decisions
 
-1. Keep implementation local. Sites local-development guidance applies; hosted Sites would change the specified runtime and is outside authorization.
+1. Keep the specified stack. Initial implementation was local; the user subsequently requested Vercel frontend/Render API deployment preparation and GitHub updates. Hosting configuration preserves the existing runtime.
 2. Use npm workspaces. PowerShell commands use npm.cmd where npm.ps1 is blocked.
 3. PostgreSQL is mandatory in development and tests. A local ephemeral PostgreSQL helper may replace unavailable Docker infrastructure, never the database technology.
 4. Guest search/click logging also uses CSRF-protected anonymous sessions. Store result IDs in search metadata to validate actual result membership and position; never trust client query text.
@@ -14,3 +14,6 @@
 12. Seeds preserve existing article content, password hashes, user role assignments and role permission edits. New identities/roles receive defaults inside a transaction. A failed browser verification initially left a test role grant behind; browser tests now await restoration and the fresh verification repeats API RBAC tests afterwards.
 13. Test runners create only databases with validated simple names ending in `_test`, never reset/drop existing databases, and use a separate connection from development. The fresh verification database is retained for inspection.
 14. Public settings expose only the magazine name and comments-enabled flag. Retention cleanup is an operator command with dry-run default; it is not automatically scheduled. View counters are lifetime totals and remain after old view events are pruned.
+15. Vercel proxies API/uploads/health to Render using a build-time `RENDER_API_ORIGIN` in `vercel.ts`. Browser requests remain same-origin, preserving HttpOnly/Secure/SameSite=Lax sessions and exact-origin CSRF checks. Do not enable third-party cookies or wildcard preview origins. Static frontend builds are independent of Prisma/database configuration.
+16. Render binds to `0.0.0.0` and its injected PORT. Proxy trust is an explicit bounded hop count (`TRUST_PROXY=1` for Render, zero locally). All API responses are no-store so CDN caching cannot suppress search/view events or share private responses. Database readiness is separate from process liveness.
+17. The Render blueprint defaults to a free API service and an operator-provided database; it provisions no paid database/disk. Migrate and idempotent seed run before startup for single-instance coursework hosting. Durable uploads require an explicitly provisioned persistent disk or future object storage adapter; free filesystem uploads remain temporary. Multi-instance hosting needs a separate release job and shared rate limiting.

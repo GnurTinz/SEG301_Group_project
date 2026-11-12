@@ -4,6 +4,8 @@ Prefix `/api/v1`. Success `{ data, meta? }`. Error `{ error: { code, message, de
 
 Cookie auth: GET `/auth/csrf` returns `{data:{csrfToken}}` and initializes a PostgreSQL session. Send `X-CSRF-Token` and credentials on every mutation, including login/register and anonymous click logging. Login/register rotate session and CSRF token; obtain a fresh token afterwards. Cookies: HttpOnly, SameSite=Lax, Secure in production.
 
+Deployment: all `/api` responses use `Cache-Control: no-store`. Vercel proxies same-origin browser requests to Render; `WEB_ORIGIN` is the exact HTTPS frontend origin, and Render uses `TRUST_PROXY=1` for TLS termination. Outside the API prefix: `GET /health` is process liveness (200); `GET /health/ready` checks database connectivity (200 `{data:{status:"ready"}}`, 503 `{error:{code:"NOT_READY",message:"Database unavailable"}}`). See [deployment guide](DEPLOYMENT.md).
+
 | Method/path | Body/query | Access/result |
 |---|---|---|
 | GET /auth/csrf | — | Public; CSRF token |
