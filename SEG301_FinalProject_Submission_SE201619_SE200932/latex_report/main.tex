@@ -6,9 +6,12 @@
 % Language & Font Encoding for Seamless Vietnamese Support
 \usepackage{iftex}
 \ifPDFTeX
-  \usepackage[utf8]{inputenc}
-  \usepackage[T5,T1]{fontenc}
-  \usepackage[vietnamese,english]{babel}
+  \usepackage[utf8]{vietnam}
+  % Maintain standard IEEE English headers and captions
+  \renewcommand{\abstractname}{Abstract}
+  \renewcommand{\tablename}{TABLE}
+  \renewcommand{\figurename}{Fig.}
+  \renewcommand{\refname}{References}
 \else
   \usepackage{fontspec}
 \fi
@@ -22,13 +25,12 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
-\usepackage{microtype}
+\usepackage[verbose=silent]{microtype}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
-\selectlanguage{english}
 
 \title{Diem Moi: Architectural Design, Search Engine Technologies Implementation, and Empirical IR Verification of an Enterprise-Grade Digital Journalism and Magazine Portal\\
 {\footnotesize \textsuperscript{*}Course Project: SEG301 -- Search Engine Technologies, Fall 2026 (FA26), FPT University}
