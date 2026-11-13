@@ -709,3 +709,84 @@ td small {
     padding: 1.25rem;
   }
 }
+
+/* Phase 2 Search Engine Visual Styles */
+mark {
+  background-color: #fef08a;
+  color: #713f12;
+  padding: 0.1em 0.25em;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.search-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #f4f7f2;
+  border: 1px solid #d9e2d6;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+.search-diagnostics-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #283e26;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.search-timing {
+  color: #556653;
+  font-size: 0.82rem;
+}
+.score-tag {
+  display: inline-block;
+  background: #e8f0e6;
+  color: #283e26;
+  border: 1px solid #c2d6be;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+.term-chip {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  margin-right: 0.3rem;
+}
+.suggestions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  width: 100%;
+}
+.suggestion-pill {
+  background: #edf3eb;
+  border: 1px solid #d1ded0;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  color: #2d452b;
+  cursor: pointer;
+  border: 1px solid #c8d8c6;
+  transition: all 0.15s ease;
+}
+.suggestion-pill:hover {
+  background: #283e26;
+  color: #ffffff;
+  border-color: #283e26;
+}

@@ -4,6 +4,7 @@ import { db } from '../../lib/db.js';
 import { fail, idParam, paged } from '../../lib/http.js';
 import { requirePermission, visitor } from '../../middleware/security.js';
 import { audit } from '../audit/service.js';
+import { globalIndex } from '../search/indexer.js';
 import {
   authoring,
   cleanContent,
@@ -76,6 +77,9 @@ documents.post('/', requirePermission('documents.create'), async (req, res) => {
     await audit(req.identity!.id, 'documents.create', 'document', d.id, {}, tx);
     return d;
   });
+  if (doc.status === 'PUBLISHED') {
+    globalIndex.indexDocument(doc);
+  }
   res.status(201).json({ data: doc });
 });
 documents.patch('/:id', requirePermission('documents.update'), async (req, res) => {
@@ -108,6 +112,11 @@ documents.patch('/:id', requirePermission('documents.update'), async (req, res) 
     await audit(req.identity!.id, 'documents.update', 'document', id, {}, tx);
     return d;
   });
+  if (doc.status === 'PUBLISHED') {
+    globalIndex.indexDocument(doc);
+  } else {
+    globalIndex.removeDocument(id);
+  }
   res.json({ data: doc });
 });
 documents.patch('/:id/status', requirePermission('documents.publish'), async (req, res) => {
@@ -125,10 +134,16 @@ documents.patch('/:id/status', requirePermission('documents.publish'), async (re
         status,
         ...(status === 'PUBLISHED' ? { publishedAt: old!.publishedAt ?? new Date() } : {}),
       },
+      include: documentInclude,
     });
     await audit(req.identity!.id, 'documents.status', 'document', id, { status }, tx);
     return d;
   });
+  if (status === 'PUBLISHED') {
+    globalIndex.indexDocument(data);
+  } else {
+    globalIndex.removeDocument(id);
+  }
   res.json({ data });
 });
 documents.delete('/:id', requirePermission('documents.delete'), async (req, res) => {
@@ -141,6 +156,7 @@ documents.delete('/:id', requirePermission('documents.delete'), async (req, res)
     if (!r.count) fail(404, 'NOT_FOUND', 'Không tìm thấy bài viết');
     await audit(req.identity!.id, 'documents.delete', 'document', id, {}, tx);
   });
+  globalIndex.removeDocument(id);
   res.json({ data: { success: true } });
 });
 documents.get('/:slug', async (req, res) => {

@@ -1,6 +1,16 @@
 export interface Envelope<T> {
   data: T;
-  meta?: { page: number; pageSize: number; total: number; totalPages: number; searchId?: string };
+  meta?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    searchId?: string;
+    mode?: string;
+    executionTimeMs?: number;
+    rankingAlgorithm?: string;
+    totalIndexedDocs?: number;
+  };
 }
 export class ApiError extends Error {
   constructor(

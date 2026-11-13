@@ -28,4 +28,7 @@ export interface Article {
   averageRating: number | null;
   ownLiked: boolean;
   ownRating: number | null;
+  score?: number;
+  matchedTerms?: string[];
+  highlightSnippet?: string;
 }

@@ -1,0 +1,55 @@
+========================================================================
+THÔNG TIN HỒ SƠ ĐỒ ÁN MÔN HỌC SEG301 (SEARCH ENGINE TECHNOLOGIES)
+ĐẠI HỌC FPT — KỲ FALL 2026 (FA26)
+HỒ SƠ HOÀN THIỆN ĐỒ ÁN TOÀN DIỆN (PHASE 1 + PHASE 2 SEARCH ENGINE)
+========================================================================
+
+1. THÀNH VIÊN NHÓM THỰC HIỆN:
+   - Trần Trung Tín  —  MSSV: SE201619 (Trưởng nhóm / Backend & Search Engine)
+   - Võ Hiếu Thắng   —  MSSV: SE200932 (Thành viên / Frontend UI & Verification)
+
+2. TÊN ĐỀ TÀI:
+   Điểm Mới — News & Digital Magazine Portal
+   (Hệ thống Tạp chí Điện tử Tích hợp Công cụ Tìm kiếm Thu hồi Thông tin - IR Engine)
+
+3. CÁC TỆP TIN CHÍNH TRONG THƯ MỤC NỘP BÀI:
+   - Slide_ThuyetTrinh_SEG301_DiemMoi.pptx : File PowerPoint thuyết trình chuẩn 12 slide ngắn gọn, trọng tâm Search Engine IR.
+   - BaoCao_IEEE_SEG301_DiemMoi.pdf        : File PDF báo cáo khoa học 2 cột theo chuẩn IEEE đầy đủ công thức và kiểm thử.
+   - SourceCode_DiemMoi_SEG301.zip         : File ZIP chứa toàn bộ mã nguồn sạch của dự án (Full Phase 1 + Phase 2).
+   - HUONG_DAN_VA_TAI_KHOAN_DEMO.txt       : Hướng dẫn cài đặt, tài khoản demo và trải nghiệm tính năng tìm kiếm.
+
+4. CÁC TÍNH NĂNG TÌM KIẾM MỚI (SEARCH ENGINE PHASE 2):
+   - Xử lý Ngôn ngữ Tự nhiên (NLP): Chuẩn hóa Unicode NFC, loại bỏ dấu (diacritics folding), lọc 65+ từ dừng (stop words) tiếng Việt/tiếng Anh, tách cụm từ ghép (bigrams).
+   - Chỉ mục đảo (Inverted Index): Lưu danh sách Postings trong bộ nhớ đệm, ghi nhận tần số từ chi tiết từng trường (tf_title, tf_summary, tf_content) và duy trì avgdl.
+   - 4 Chế độ Xếp hạng Độ phù hợp (Multi-Model Relevance Ranking):
+     1. Okapi BM25F (Khuyên dùng): Trọng số trường Title=3.0, Summary=2.0, Content=1.0 kết hợp công thức Robertson-Spärck Jones IDF.
+     2. TF-IDF Vector Space Model: Đánh giá độ tương đồng Cosine với tần số từ hàm logarit.
+     3. Hybrid CTR Boost: Tự động học từ lịch sử nhấp chuột (search_click_logs), đẩy bài viết có CTR cao lên đầu kết quả tìm kiếm.
+     4. SQL ILIKE (Baseline): Chế độ tìm kiếm cơ bản để so sánh hiệu năng.
+   - Tự động gợi ý từ khóa (Autocomplete Suggestions): Gợi ý theo tiền tố tại /api/v1/search/suggestions.
+   - Trích xuất tóm tắt & Highlight: Đánh dấu từ khóa tìm thấy trong kết quả bằng thẻ <mark>.
+   - Chẩn đoán chỉ mục đảo: API /api/v1/search/stats và API tái lập chỉ mục /api/v1/search/reindex (quyền documents.publish).
+
+5. TÀI KHOẢN TRẢI NGHIỆM DEMO (Mật khẩu cấu hình trong file .env):
+   - Super Admin: admin@demo.local (Quản trị người dùng, vai trò, audit logs, cài đặt hệ thống)
+   - Content Manager: manager@demo.local (CRUD bài viết, xuất bản/gỡ bài, quản lý danh mục & thẻ)
+   - Moderator: moderator@demo.local (Tiếp nhận hàng đợi báo cáo vi phạm, ẩn/khôi phục bình luận)
+   - Data & SEO Specialist: seo@demo.local (Cấu hình SEO metadata, theo dõi dashboard CTR & từ khóa)
+   - Regular User: user@demo.local (Độc giả đọc bài, bình luận phân cấp, rating 1-5 sao, thích bài viết)
+
+6. HƯỚNG DẪN CHẠY MÃ NGUỒN:
+   - Bước 1: Giải nén SourceCode_DiemMoi_SEG301.zip
+   - Bước 2: Copy file .env.example thành .env
+   - Bước 3: Cài đặt thư viện: 'npm ci'
+   - Bước 4: Khởi động cơ sở dữ liệu:
+             + Dùng Docker: 'docker compose up -d --wait'
+             + Hoặc dùng Postgres local tích hợp: 'npm run db:local'
+   - Bước 5: Đồng bộ database & nạp dữ liệu mẫu:
+             'npm run db:migrate' && 'npm run db:seed'
+   - Bước 6: Khởi chạy ứng dụng:
+             'npm run dev' -> Truy cập web tại: http://localhost:5173
+             (Trang tìm kiếm: http://localhost:5173/search)
+   - Bước 7: Chạy kiểm thử tự động (SQA):
+             'npm test' (11 test files, 38/38 tests Vitest 100% PASS)
+             'npm run test:e2e' (7 Playwright E2E browser suites)
+========================================================================

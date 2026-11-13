@@ -25,16 +25,27 @@ function Filters({ searchMode }: { searchMode: boolean }) {
       }}
     >
       {searchMode && (
-        <label className="keyword">
-          Từ khóa
-          <input
-            name="q"
-            defaultValue={params.get('q') ?? ''}
-            required
-            maxLength={200}
-            placeholder="Bạn muốn tìm hiểu điều gì?"
-          />
-        </label>
+        <>
+          <label className="keyword">
+            Từ khóa
+            <input
+              name="q"
+              defaultValue={params.get('q') ?? ''}
+              required
+              maxLength={200}
+              placeholder="Bạn muốn tìm hiểu điều gì?"
+            />
+          </label>
+          <label>
+            Thuật toán tìm kiếm
+            <select name="mode" defaultValue={params.get('mode') ?? 'bm25'}>
+              <option value="bm25">Okapi BM25F (Khuyên dùng)</option>
+              <option value="tfidf">TF-IDF Vector Space</option>
+              <option value="hybrid">Hybrid BM25 + CTR Boost</option>
+              <option value="ilike">SQL ILIKE (Phase 1 Baseline)</option>
+            </select>
+          </label>
+        </>
       )}
       <label>
         Danh mục
@@ -123,6 +134,30 @@ export function ListingPage({ searchMode = false }: { searchMode?: boolean }) {
         </p>
       </section>
       <Filters searchMode={searchMode} />
+      {searchMode && (
+        <div className="suggestions-bar">
+          <span className="muted" style={{ fontSize: '0.75rem' }}>
+            Gợi ý tìm kiếm:
+          </span>
+          {['trí tuệ nhân tạo', 'học máy', 'mô hình ngôn ngữ', 'chuyển đổi số', 'thị giác máy tính'].map(
+            (tag) => (
+              <button
+                type="button"
+                key={tag}
+                className="suggestion-pill"
+                onClick={() => {
+                  const next = new URLSearchParams(params);
+                  next.set('q', tag);
+                  next.set('page', '1');
+                  setParams(next);
+                }}
+              >
+                🔍 {tag}
+              </button>
+            ),
+          )}
+        </div>
+      )}
       <ErrorNotice error={q.error || click.error} />
       {!enabled ? (
         <p className="notice">Nhập từ khóa để bắt đầu tìm kiếm.</p>
@@ -134,6 +169,27 @@ export function ListingPage({ searchMode = false }: { searchMode?: boolean }) {
             <h2>{searchMode ? `Kết quả cho “${params.get('q')}”` : 'Bài viết mới nhất'}</h2>
             <span className="muted">{q.data?.meta?.total ?? 0} bài viết</span>
           </div>
+
+          {searchMode && q.data?.meta && (
+            <div className="search-diagnostics">
+              <div>
+                <span className="search-diagnostics-badge">
+                  ⚙️ {q.data.meta.rankingAlgorithm || 'BM25F Relevance'}
+                </span>
+                {q.data.meta.totalIndexedDocs !== undefined && (
+                  <span className="muted" style={{ marginLeft: '0.75rem' }}>
+                    Chỉ mục: {q.data.meta.totalIndexedDocs} bài viết
+                  </span>
+                )}
+              </div>
+              {q.data.meta.executionTimeMs !== undefined && (
+                <span className="search-timing">
+                  ⏱️ Thời gian xử lý: <strong>{q.data.meta.executionTimeMs} ms</strong>
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="article-grid">
             {q.data?.data.map((d, index) => (
               <article
@@ -151,6 +207,11 @@ export function ListingPage({ searchMode = false }: { searchMode?: boolean }) {
                   <div className="card-meta">
                     <span className="category">{d.category.name}</span>
                     <span>{dateText(d.publishedAt)}</span>
+                    {searchMode && d.score !== undefined && (
+                      <span className="score-tag" title="Điểm số phù hợp theo giải thuật IR">
+                        Độ khớp: {d.score}
+                      </span>
+                    )}
                   </div>
                   <h2>
                     <Link
@@ -167,7 +228,20 @@ export function ListingPage({ searchMode = false }: { searchMode?: boolean }) {
                       {d.title}
                     </Link>
                   </h2>
-                  <p>{d.summary}</p>
+                  {searchMode && d.highlightSnippet ? (
+                    <p dangerouslySetInnerHTML={{ __html: d.highlightSnippet }} />
+                  ) : (
+                    <p>{d.summary}</p>
+                  )}
+                  {searchMode && d.matchedTerms && d.matchedTerms.length > 0 && (
+                    <div style={{ marginTop: '0.4rem' }}>
+                      {d.matchedTerms.map((t) => (
+                        <span key={t} className="term-chip">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="byline">
                     <span>{d.author}</span>
                     <span>{d.viewsCount.toLocaleString('vi-VN')} lượt xem</span>
