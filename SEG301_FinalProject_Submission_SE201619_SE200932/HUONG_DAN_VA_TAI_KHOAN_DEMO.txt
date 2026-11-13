@@ -15,6 +15,7 @@ HỒ SƠ HOÀN THIỆN ĐỒ ÁN TOÀN DIỆN (PHASE 1 + PHASE 2 SEARCH ENGINE)
 3. CÁC TỆP TIN CHÍNH TRONG THƯ MỤC NỘP BÀI:
    - Slide_ThuyetTrinh_SEG301_DiemMoi.pptx : File PowerPoint thuyết trình chuẩn 12 slide ngắn gọn, trọng tâm Search Engine IR.
    - BaoCao_IEEE_SEG301_DiemMoi.pdf        : File PDF báo cáo khoa học 2 cột theo chuẩn IEEE đầy đủ công thức và kiểm thử.
+   - BaoCao_IEEE_LaTeX_Project.zip         : File ZIP chứa toàn bộ mã nguồn LaTeX chuẩn IEEEtran (main.tex và IEEEtran.cls) sẵn sàng tải lên Overleaf.
    - SourceCode_DiemMoi_SEG301.zip         : File ZIP chứa toàn bộ mã nguồn sạch của dự án (Full Phase 1 + Phase 2).
    - HUONG_DAN_VA_TAI_KHOAN_DEMO.txt       : Hướng dẫn cài đặt, tài khoản demo và trải nghiệm tính năng tìm kiếm.
 

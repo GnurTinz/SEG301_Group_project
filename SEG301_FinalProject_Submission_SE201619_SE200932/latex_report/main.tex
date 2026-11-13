@@ -1,0 +1,290 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% IEEE Conference LaTeX Template for SEG301 Final Project
+% FPT University — Fall 2026 (FA26)
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{microtype}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Diem Moi: Architectural Design, Search Engine Technologies Implementation, and Empirical IR Verification of an Enterprise-Grade Digital Journalism and Magazine Portal\\
+{\footnotesize \textsuperscript{*}Course Project: SEG301 -- Search Engine Technologies, Fall 2026 (FA26), FPT University}
+}
+
+\author{\IEEEauthorblockN{Tran Trung Tin}
+\IEEEauthorblockA{\textit{Faculty of Software Engineering} \\
+\textit{FPT University}\\
+Da Nang, Vietnam \\
+Student ID: SE201619 \\
+Email: tinttse201619@fpt.edu.vn}
+\and
+\IEEEauthorblockN{Vo Hieu Thang}
+\IEEEauthorblockA{\textit{Faculty of Software Engineering} \\
+\textit{FPT University}\\
+Da Nang, Vietnam \\
+Student ID: SE200932 \\
+Email: thangvhse200932@fpt.edu.vn}
+}
+
+\maketitle
+
+\begin{abstract}
+Modern digital journalism and online magazine platforms face severe limitations when relying exclusively on basic database substring filtering (SQL ILIKE), resulting in high latency, zero recall for compound terminology, and an inability to rank documents by information relevance or user behavior. This paper presents \textit{Điểm Mới}, a high-performance digital news portal built to bridge enterprise web engineering with modern Information Retrieval (IR) science. In Phase 1, we engineered an enterprise-grade full-stack architecture featuring a dual-format PostgreSQL document store, five-tier Role-Based Access Control (RBAC) protected by transaction-level advisory locks, and cryptographic session management. In Phase 2, we designed and deployed a dedicated in-memory Inverted Index, a Vietnamese NLP tokenization engine with Unicode NFC normalization and diacritics folding, and a multi-model relevance ranking pipeline supporting Okapi BM25F with Robertson-Spärck Jones IDF, TF-IDF Cosine Similarity, and an online Learning-to-Rank Hybrid model driven by live Click-Through Rate (CTR) telemetry. Automated verification across 38 Vitest suites (100\% PASS) and 7 Playwright browser journeys (100\% PASS) confirms system robustness. An empirical benchmark across five realistic Vietnamese queries demonstrates that BM25F and TF-IDF increase candidate document retrieval from 0.2 to 44.0 articles and improve Mean Reciprocal Rank (MRR) from 0.200 to 0.450--0.500 over SQL ILIKE, while maintaining an average query latency under 11\,ms.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Information Retrieval, Inverted Index, Okapi BM25F, Robertson-Spärck Jones IDF, TF-IDF Cosine Similarity, Click-Through Rate, Vietnamese NLP, Role-Based Access Control, Digital Journalism.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Digital news portals and scientific magazines must process high volumes of unstructured articles while satisfying complex reader discovery intents. In educational and research software engineering contexts—specifically the \textit{SEG301: Search Engine Technologies} curriculum at FPT University—students are tasked with establishing a rigorous two-phase progression: first delivering an enterprise web application with rigorous CRUD operations and Role-Based Access Control (RBAC), and subsequently replacing simplistic database queries with a purpose-built Information Retrieval engine.
+
+Conventional relational databases executing pattern-matching queries (e.g., \texttt{WHERE content ILIKE '\%keyword\%'}) suffer from well-documented IR deficiencies:
+\begin{enumerate}
+    \item \textbf{Rigid Substring Constraints:} Multi-word Vietnamese queries (e.g., \textit{``trí tuệ nhân tạo''}, \textit{``chuyển đổi số''}) return zero hits whenever words appear separated across sentences.
+    \item \textbf{Lack of Relevance Scoring:} SQL returns unweighted chronological listings without term frequency (TF), inverse document frequency (IDF), or document length normalization.
+    \item \textbf{Absence of Implicit User Feedback:} Traditional stores cannot rank articles dynamically based on empirical user engagement or query Click-Through Rate (CTR).
+\end{enumerate}
+
+To overcome these challenges, we designed and implemented \textit{Điểm Mới} (``New Perspectives''), a digital magazine repository specialized in artificial intelligence, computer vision, natural language processing, and digital economics. This paper details the architecture, mathematical formulations, index synchronization lifecycle, and empirical evaluation of the platform.
+
+\section{System Architecture and Security}
+\subsection{Monorepo Structure and Technology Stack}
+The system is constructed as a modular TypeScript monorepo governed by npm workspaces:
+\begin{itemize}
+    \item \textbf{API Backend (\texttt{@portal/api}):} Node.js 24 runtime with Express, Prisma ORM 6, Zod schema validation, and Argon2id password hashing.
+    \item \textbf{Web Client (\texttt{@portal/web}):} React 18 Single Page Application (SPA), Vite 7 bundler, TanStack Query for cache invalidation, and Tailwind CSS.
+    \item \textbf{Shared Contract (\texttt{@portal/shared}):} Unified TypeScript types, validation rules, and RBAC matrix definitions.
+    \item \textbf{Persistence Layer:} PostgreSQL 18 with relational schemas, CHECK constraints, and ACID transactions.
+\end{itemize}
+
+\subsection{Five-Tier Role-Based Access Control (RBAC)}
+The platform enforces strict authorization boundaries across five distinct system roles:
+\begin{enumerate}
+    \item \textbf{Super Admin:} Global configuration, user lifecycle, administrative audit logs, and system settings.
+    \item \textbf{Content Manager:} Document authoring, taxonomy management (categories and tags), and publishing lifecycle.
+    \item \textbf{Moderator:} Review queue inspection, comment visibility moderation, and abuse report resolution.
+    \item \textbf{Data \& SEO Specialist:} SEO metadata curation (canonical URLs, OpenGraph tags) and search telemetry analytics.
+    \item \textbf{Regular Reader:} Profile management, hierarchical commenting, 1--5 star rating, and article liking.
+\end{enumerate}
+
+\subsection{Concurrency Control and Administrative Safety Invariants}
+To prevent race conditions where concurrent requests might delete or suspend the sole active administrator, the system applies PostgreSQL transaction-level advisory locks:
+\begin{equation}
+\text{pg\_advisory\_xact\_lock}(H(\text{`user-role-lock'}))
+\end{equation}
+All role modifications execute within an exclusive transaction verifying that at least one active, non-suspended Super Admin account remains persistently available.
+
+\section{Document Data Store and Telemetry}
+\subsection{Dual-Format Document Representation}
+To balance reader security with IR search efficiency, the database maintains dual representations for every article:
+\begin{itemize}
+    \item \texttt{content}: Sanitized rich HTML sanitized via DOMPurify to prevent Cross-Site Scripting (XSS).
+    \item \texttt{content\_plain}: Stripped, plain-text content preserving Vietnamese Unicode characters for tokenization and term frequency extraction.
+\end{itemize}
+
+\subsection{Interaction Logging and Attribution Schema}
+To support Learning-to-Rank and search telemetry without forging vulnerabilities, the database records interactions in the \texttt{search\_click\_logs} relation. When a user submits a query, a server-side record is created:
+\begin{equation}
+L_{\text{search}} = \langle \text{id}, \text{user\_id}, \text{owner\_key}, q, \text{mode}, |R|, \text{timestamp} \rangle
+\end{equation}
+When the user selects an article from search results, the client issues a signed click attribution payload:
+\begin{equation}
+L_{\text{click}} = \langle \text{search\_id}, \text{clicked\_doc\_id}, \text{rank\_position} \rangle
+\end{equation}
+The server validates that \texttt{search\_id} exists and matches the session owner before recording the click, guaranteeing telemetry integrity.
+
+\section{Search Engine Technologies (IR Architecture)}
+\subsection{Vietnamese NLP and Tokenization Pipeline}
+Vietnamese text introduces unique IR challenges due to tone marks, decomposed Unicode representations, and compound words. Our tokenizer implements a four-stage pipeline:
+\begin{enumerate}
+    \item \textbf{Unicode Normalization:} Normalizes all incoming strings to Unicode NFC form (\texttt{String.normalize('NFC')}), resolving decomposed vowel-tone sequences.
+    \item \textbf{Diacritics Folding (Accent-Insensitive Matching):} Builds an accent-free phonetic projection using explicit character mapping (e.g., \textit{``trí tuệ''} $\rightarrow$ \textit{``tri tue''}). Both accented and unaccented terms are indexed into inverted postings.
+    \item \textbf{Stop-Word Elimination:} Filters out 65+ high-frequency Vietnamese grammatical function words (e.g., \textit{``và''}, \textit{``của''}, \textit{``là''}, \textit{``được''}, \textit{``những''}, \textit{``các''}) alongside common English stop-words.
+    \item \textbf{Compound Shingling:} Extracts contiguous token bigrams to capture idiomatic concepts (e.g., \textit{``học máy''}, \textit{``trí tuệ''}, \textit{``chuyển đổi''}).
+\end{enumerate}
+
+\subsection{In-Memory Inverted Index and Lifecycle Synchronization}
+The core engine maintains an in-memory inverted index (\texttt{InvertedIndex}) structured as a hash table mapping terms to postings:
+\begin{equation}
+\mathcal{I}: t \mapsto \{ d \in \mathcal{D} \mid \langle \text{tf}_{t,d,\text{title}}, \text{tf}_{t,d,\text{summary}}, \text{tf}_{t,d,\text{content}} \rangle \}
+\end{equation}
+
+The index lifecycle is strictly synchronized with document CRUD events:
+\begin{itemize}
+    \item \textbf{Server Startup:} \texttt{ensureIndexReady()} lazily seeds the index from the database for all active, published articles.
+    \item \textbf{Creation \& Draft:} Newly authored articles default to \texttt{DRAFT} and are excluded from the index.
+    \item \textbf{Publishing:} When status updates to \texttt{PUBLISHED}, \texttt{globalIndex.indexDocument(doc)} immediately integrates the article into memory.
+    \item \textbf{Unpublishing \& Soft-Deletion:} Document removal or status retraction to \texttt{UNPUBLISHED} immediately triggers \texttt{globalIndex.removeDocument(id)}.
+    \item \textbf{Manual Reindexing:} An authenticated endpoint (\texttt{POST /api/v1/search/reindex}) allows administrators to rebuild the entire vocabulary atomically.
+\end{itemize}
+
+\subsection{Multi-Model Relevance Ranking Algorithms}
+The engine exposes four selectable retrieval modes:
+
+\subsubsection{Okapi BM25F (Field-Weighted Relevance)}
+Extends the classic BM25 model by calculating effective term frequency across document fields (title, summary, content) with distinct weights $W_f$:
+\begin{equation}
+\tilde{\text{tf}}_{t,D} = \sum_{f \in \{\text{title}, \text{summary}, \text{content}\}} W_f \cdot \frac{\text{tf}_{t,D,f}}{B_f}
+\end{equation}
+where $W_{\text{title}} = 3.0, W_{\text{summary}} = 2.0, W_{\text{content}} = 1.0$, and the length normalization factor $B_f$ is:
+\begin{equation}
+B_f = (1 - b_f) + b_f \cdot \frac{\text{len}_{d,f}}{\text{avgdl}_f} \quad (b_f = 0.75)
+\end{equation}
+
+The Robertson-Spärck Jones Inverse Document Frequency (RSJ IDF) is formulated with non-negative lower bounding:
+\begin{equation}
+\text{IDF}(t) = \ln\left(1 + \frac{N - \min(N, \text{df}(t)) + 0.5}{\text{df}(t) + 0.5}\right)
+\end{equation}
+The total BM25F score is computed as:
+\begin{equation}
+\text{Score}_{\text{BM25F}}(D, Q) = \sum_{t \in Q} \text{IDF}(t) \cdot \frac{\tilde{\text{tf}}_{t,D} \cdot (k_1 + 1)}{\tilde{\text{tf}}_{t,D} + k_1}
+\end{equation}
+with saturation parameter $k_1 = 1.2$. Exact title matches grant an additional boost of $+5.0$.
+
+\subsubsection{TF-IDF Vector Space Model (Cosine Similarity)}
+Evaluates the normalized cosine angle between query vector $\mathbf{q}$ and document vector $\mathbf{d}$:
+\begin{equation}
+\text{Cosine}(Q, D) = \frac{\sum_{t \in Q \cap D} w_{t, Q} \cdot w_{t, D}}{\|\mathbf{q}\| \cdot \|\mathbf{d}\|}
+\end{equation}
+where sub-linear term frequency scaling is applied:
+\begin{equation}
+w_{t, D} = (1 + \ln(\text{tf}_{t, D})) \cdot \text{IDF}(t)
+\end{equation}
+
+\subsubsection{Hybrid Ranking (BM25F + Real CTR Feedback + Recency)}
+Fuses textual relevance with empirical user interaction logged in search click telemetry:
+\begin{equation}
+\text{Score}_{\text{hybrid}} = \text{Score}_{\text{BM25F}} \cdot \text{ctrBoost} \cdot \text{viewsBoost}
+\end{equation}
+where query Click-Through Rate is calculated directly from interaction telemetry:
+\begin{equation}
+\text{CTR}(q, D) = \frac{\text{clicks}(q, D)}{\max(1, \text{searches}(q))}
+\end{equation}
+\begin{equation}
+\text{ctrBoost} = 1.0 + \min(0.5, \text{CTR}(q, D) \times 0.5)
+\end{equation}
+\begin{equation}
+\text{viewsBoost} = 1.0 + \min(0.3, \log_{10}(1 + \text{views}) \times 0.05)
+\end{equation}
+For newly published articles with zero views and zero clicks, $\text{ctrBoost} = 1.00$ and $\text{viewsBoost} = 1.00$, preserving mathematical stability without penalizing cold items.
+
+\subsubsection{SQL ILIKE (Phase 1 Baseline)}
+Maintained for backward compatibility and benchmarking, executing database-level disjunctions across title, summary, and plain content ordered chronologically.
+
+\subsection{Autocomplete Suggestions and Dynamic Snippets}
+The \texttt{/api/v1/search/suggestions} endpoint traverses the vocabulary trie to suggest completions based on document frequency. Matched query keywords are highlighted in extracted 160-character snippets using HTML \texttt{<mark>} tags.
+
+\section{Empirical Verification and IR Benchmark}
+\subsection{Software Quality Assurance (SQA)}
+Verification was executed against dedicated test databases (\texttt{portal\_test}) across all layers of the monorepo, as summarized in Table~\ref{tab:sqa}.
+
+\begin{table}[htbp]
+\caption{Software Quality Assurance and Test Execution Metrics}
+\begin{center}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Harness} & \textbf{Target Test Suite} & \textbf{Count} & \textbf{Duration} & \textbf{Status} \\
+\midrule
+Vitest & Phase 2 Search Engine (IR) & 14 & 0.65s & 100\% PASS \\
+Vitest & Auth, Session \& RBAC & 3 & 0.58s & 100\% PASS \\
+Vitest & Administrative Advisory Locks & 3 & 1.10s & 100\% PASS \\
+Vitest & Content Lifecycle \& Uploads & 2 & 0.74s & 100\% PASS \\
+Vitest & Phase 1 SQL Search \& Logs & 2 & 0.54s & 100\% PASS \\
+Vitest & Moderation \& Mentions & 2 & 0.95s & 100\% PASS \\
+Vitest & SEO Metadata \& Analytics & 1 & 0.67s & 100\% PASS \\
+Vitest & Seed Corpus Validation (80 Docs) & 3 & 2.61s & 100\% PASS \\
+Vitest & Deployment \& Health Probes & 8 & 0.53s & 100\% PASS \\
+Playwright & E2E Chromium User Journeys & 7 & 16.6s & 100\% PASS \\
+TypeScript & Full Workspace Typecheck & 3 Pkgs & 2.10s & 0 Errors \\
+ESLint & Codebase Linting Rules & All Files & 3.20s & 0 Warnings \\
+\bottomrule
+\end{tabular}
+\label{tab:sqa}
+\end{center}
+\end{table}
+
+\subsection{Comparative Information Retrieval Benchmark}
+We evaluated SQL ILIKE, TF-IDF Cosine, Okapi BM25F, and Hybrid Ranking across five representative Vietnamese queries on the 80-article seed corpus (72 published articles). Ground-truth relevance was independently judged based on information need. Standard Precision@5 is computed with fixed denominator $K=5$:
+\begin{equation}
+P@5 = \frac{|\text{Relevant documents in top 5}|}{5}
+\end{equation}
+
+\begin{table}[htbp]
+\caption{Information Retrieval Evaluation Across 5 Vietnamese Queries}
+\begin{center}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Query} & \textbf{Algorithm} & \textbf{Retrieved ($|R|$)} & \textbf{Latency} & \textbf{P@5} & \textbf{MRR} \\
+\midrule
+``trí tuệ nhân tạo'' & SQL ILIKE & 0 & 4.82\,ms & 0.00 & 0.000 \\
+ & TF-IDF (Cosine) & 71 & 15.25\,ms & 0.20 & 1.000 \\
+ & BM25F & 71 & 14.75\,ms & 0.20 & 0.250 \\
+ & Hybrid & 71 & 17.06\,ms & 0.20 & 0.250 \\
+\midrule
+``học máy'' & SQL ILIKE & 1 & 5.06\,ms & 0.20 & 1.000 \\
+ & TF-IDF (Cosine) & 31 & 7.55\,ms & 0.20 & 1.000 \\
+ & BM25F & 31 & 7.82\,ms & 0.20 & 1.000 \\
+ & Hybrid & 31 & 8.34\,ms & 0.20 & 1.000 \\
+\midrule
+``bán dẫn'' & SQL ILIKE & 0 & 3.68\,ms & 0.00 & 0.000 \\
+\textit{(Negative Control)} & TF-IDF (Cosine) & 38 & 8.28\,ms & 0.00 & 0.000 \\
+ & BM25F & 38 & 8.96\,ms & 0.00 & 0.000 \\
+ & Hybrid & 38 & 9.45\,ms & 0.00 & 0.000 \\
+\midrule
+``chuyển đổi số'' & SQL ILIKE & 0 & 3.93\,ms & 0.00 & 0.000 \\
+ & TF-IDF (Cosine) & 69 & 15.54\,ms & 0.20 & 0.500 \\
+ & BM25F & 69 & 12.88\,ms & 0.20 & 1.000 \\
+ & Hybrid & 69 & 14.11\,ms & 0.20 & 1.000 \\
+\midrule
+``an ninh mạng'' & SQL ILIKE & 0 & 3.70\,ms & 0.00 & 0.000 \\
+ & TF-IDF (Cosine) & 11 & 4.87\,ms & 0.00 & 0.000 \\
+ & BM25F & 11 & 4.36\,ms & 0.00 & 0.000 \\
+ & Hybrid & 11 & 6.79\,ms & 0.00 & 0.000 \\
+\midrule
+\textbf{Macro Average} & \textbf{SQL ILIKE} & \textbf{0.2 docs} & \textbf{4.24\,ms} & \textbf{0.04} & \textbf{0.200} \\
+\textbf{(Across 5 Queries)} & \textbf{TF-IDF} & \textbf{44.0 docs} & \textbf{10.30\,ms} & \textbf{0.12} & \textbf{0.500} \\
+ & \textbf{BM25F} & \textbf{44.0 docs} & \textbf{9.75\,ms} & \textbf{0.12} & \textbf{0.450} \\
+ & \textbf{Hybrid} & \textbf{44.0 docs} & \textbf{11.15\,ms} & \textbf{0.12} & \textbf{0.450} \\
+\bottomrule
+\end{tabular}
+\label{tab:benchmark}
+\end{center}
+\end{table}
+
+\subsection{Discussion on IR Dynamics and Ranking Behavior}
+The empirical results in Table~\ref{tab:benchmark} highlight crucial IR phenomena:
+\begin{enumerate}
+    \item \textbf{Retrieved Count ($|R|$) vs. Recall:} The retrieved count $|R|$ reflects candidate pool cardinality, not recall. SQL ILIKE failed completely on 4 out of 5 queries ($|R|=0$) because compound terms do not appear as exact continuous substrings. Inverted Index scoring retrieved 11 to 71 candidates, providing a comprehensive pool for ranking.
+    \item \textbf{Bag-of-Words and Polysemy Limitations:} For query \textit{``trí tuệ nhân tạo''}, unigram BM25F ranked an OCR document at rank \#1 because individual tokens such as \textit{``tạo''} and \textit{``nhân''} occurred with high local frequency in short summary fields. Similarly, for \textit{``an ninh mạng''}, the shared token \textit{``mạng''} matched neural network articles (\textit{``mạng nơ-ron''}). This confirms that while BM25F provides superior candidate recall over SQL, integrating n-gram proximity scoring is essential to prevent polysemic false positives at rank \#1.
+\end{enumerate}
+
+\section{Conclusion and Future Work}
+The \textit{Điểm Mới} project successfully bridges full-stack enterprise web development with modern Information Retrieval principles for Vietnamese text discovery. By integrating an in-memory inverted index, Robertson-Spärck Jones IDF, field-weighted BM25F, and live CTR interaction logging, the system delivers sub-12\,ms retrieval while dramatically outperforming SQL ILIKE in candidate coverage and mean reciprocal rank. Future enhancements include implementing positional inverted indexes for phrase distance weighting and exploring neural dense embeddings to further resolve polysemic term ambiguities.
+
+\section*{Acknowledgment}
+The authors express their sincere appreciation to the faculty of the Department of Software Engineering at FPT University for their academic leadership and guidance throughout the SEG301 Search Engine Technologies course.
+
+\begin{thebibliography}{00}
+\bibitem{b1} S. E. Robertson and S. Walker, ``Some simple effective approximations to the 2-Poisson model for probabilistic weighted retrieval,'' in \textit{Proc. 17th ACM SIGIR}, 1994, pp. 232--241.
+\bibitem{b2} S. Robertson, H. Zaragoza, et al., ``The probabilistic relevance framework: BM25 and beyond,'' \textit{Found. Trends Inf. Retr.}, vol. 3, no. 4, pp. 333--389, 2009.
+\bibitem{b3} G. Salton, A. Wong, and C. S. Yang, ``A vector space model for automatic indexing,'' \textit{Commun. ACM}, vol. 18, no. 11, pp. 613--620, Nov. 1975.
+\bibitem{b4} T. Joachims, ``Optimizing search engines using clickthrough data,'' in \textit{Proc. 8th ACM SIGKDD}, 2002, pp. 133--142.
+\bibitem{b5} C. D. Manning, P. Raghavan, and H. Schütze, \textit{Introduction to Information Retrieval}. Cambridge: Cambridge University Press, 2008.
+\bibitem{b6} R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman, ``Role-based access control models,'' \textit{IEEE Computer}, vol. 29, no. 2, pp. 38--47, Feb. 1996.
+\bibitem{b7} OWASP Foundation, ``OWASP Top 10: 2021 - The Ten Most Critical Web Application Security Risks,'' \textit{OWASP Foundation}, Tech. Rep., Oct. 2021.
+\bibitem{b8} IEEE Computer Society, ``IEEE Standard for Software Quality Assurance Processes,'' \textit{IEEE Std 730-2014}, pp. 1--138, 2014.
+\end{thebibliography}
+
+\end{document}
