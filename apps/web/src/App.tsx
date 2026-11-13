@@ -106,7 +106,7 @@ export default function App() {
       <footer>
         <strong>điểm mới.</strong>
         <p>Tri thức mở ra những khả năng mới.</p>
-        <span>Tạp chí khoa học và công nghệ · Phase 1</span>
+        <span>Tạp chí khoa học và công nghệ</span>
       </footer>
     </>
   );
