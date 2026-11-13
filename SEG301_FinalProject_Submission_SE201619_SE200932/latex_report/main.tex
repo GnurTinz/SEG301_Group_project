@@ -3,6 +3,16 @@
 % IEEE Conference LaTeX Template for SEG301 Final Project
 % FPT University — Fall 2026 (FA26)
 
+% Language & Font Encoding for Seamless Vietnamese Support
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T5,T1]{fontenc}
+  \usepackage[vietnamese,english]{babel}
+\else
+  \usepackage{fontspec}
+\fi
+
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -10,6 +20,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{url}
 \usepackage{microtype}
 
@@ -17,6 +28,7 @@
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
+\selectlanguage{english}
 
 \title{Diem Moi: Architectural Design, Search Engine Technologies Implementation, and Empirical IR Verification of an Enterprise-Grade Digital Journalism and Magazine Portal\\
 {\footnotesize \textsuperscript{*}Course Project: SEG301 -- Search Engine Technologies, Fall 2026 (FA26), FPT University}
@@ -25,16 +37,14 @@
 \author{\IEEEauthorblockN{Tran Trung Tin}
 \IEEEauthorblockA{\textit{Faculty of Software Engineering} \\
 \textit{FPT University}\\
-Da Nang, Vietnam \\
-Student ID: SE201619 \\
-Email: tinttse201619@fpt.edu.vn}
+Ho Chi Minh, Vietnam \\
+Student ID: SE201619}
 \and
 \IEEEauthorblockN{Vo Hieu Thang}
 \IEEEauthorblockA{\textit{Faculty of Software Engineering} \\
 \textit{FPT University}\\
-Da Nang, Vietnam \\
-Student ID: SE200932 \\
-Email: thangvhse200932@fpt.edu.vn}
+Ho Chi Minh, Vietnam \\
+Student ID: SE200932}
 }
 
 \maketitle
@@ -48,7 +58,7 @@ Information Retrieval, Inverted Index, Okapi BM25F, Robertson-Spärck Jones IDF,
 \end{IEEEkeywords}
 
 \section{Introduction}
-Digital news portals and scientific magazines must process high volumes of unstructured articles while satisfying complex reader discovery intents. In educational and research software engineering contexts—specifically the \textit{SEG301: Search Engine Technologies} curriculum at FPT University—students are tasked with establishing a rigorous two-phase progression: first delivering an enterprise web application with rigorous CRUD operations and Role-Based Access Control (RBAC), and subsequently replacing simplistic database queries with a purpose-built Information Retrieval engine.
+Digital news portals and scientific magazines must process high volumes of unstructured articles while satisfying complex reader discovery intents. In educational and research software engineering contexts---specifically the \textit{SEG301: Search Engine Technologies} curriculum at FPT University---students are tasked with establishing a rigorous two-phase progression: first delivering an enterprise web application with rigorous CRUD operations and Role-Based Access Control (RBAC), and subsequently replacing simplistic database queries with a purpose-built Information Retrieval engine.
 
 Conventional relational databases executing pattern-matching queries (e.g., \texttt{WHERE content ILIKE '\%keyword\%'}) suffer from well-documented IR deficiencies:
 \begin{enumerate}
@@ -82,7 +92,7 @@ The platform enforces strict authorization boundaries across five distinct syste
 \subsection{Concurrency Control and Administrative Safety Invariants}
 To prevent race conditions where concurrent requests might delete or suspend the sole active administrator, the system applies PostgreSQL transaction-level advisory locks:
 \begin{equation}
-\text{pg\_advisory\_xact\_lock}(H(\text{`user-role-lock'}))
+\text{pg\_advisory\_xact\_lock}(H(\text{``user-role-lock''}))
 \end{equation}
 All role modifications execute within an exclusive transaction verifying that at least one active, non-suspended Super Admin account remains persistently available.
 
@@ -90,14 +100,14 @@ All role modifications execute within an exclusive transaction verifying that at
 \subsection{Dual-Format Document Representation}
 To balance reader security with IR search efficiency, the database maintains dual representations for every article:
 \begin{itemize}
-    \item \texttt{content}: Sanitized rich HTML sanitized via DOMPurify to prevent Cross-Site Scripting (XSS).
-    \item \texttt{content\_plain}: Stripped, plain-text content preserving Vietnamese Unicode characters for tokenization and term frequency extraction.
+    \item \texttt{content}: Sanitized rich HTML processed via DOMPurify to prevent Cross-Site Scripting (XSS).
+    \item \texttt{content\_plain}: Stripped plain-text content preserving Vietnamese Unicode characters for tokenization and term frequency extraction.
 \end{itemize}
 
 \subsection{Interaction Logging and Attribution Schema}
 To support Learning-to-Rank and search telemetry without forging vulnerabilities, the database records interactions in the \texttt{search\_click\_logs} relation. When a user submits a query, a server-side record is created:
 \begin{equation}
-L_{\text{search}} = \langle \text{id}, \text{user\_id}, \text{owner\_key}, q, \text{mode}, |R|, \text{timestamp} \rangle
+L_{\text{search}} = \langle \text{id}, \text{user\_id}, \text{owner\_key}, q, \text{mode}, |R|, t \rangle
 \end{equation}
 When the user selects an article from search results, the client issues a signed click attribution payload:
 \begin{equation}
@@ -136,9 +146,9 @@ The engine exposes four selectable retrieval modes:
 \subsubsection{Okapi BM25F (Field-Weighted Relevance)}
 Extends the classic BM25 model by calculating effective term frequency across document fields (title, summary, content) with distinct weights $W_f$:
 \begin{equation}
-\tilde{\text{tf}}_{t,D} = \sum_{f \in \{\text{title}, \text{summary}, \text{content}\}} W_f \cdot \frac{\text{tf}_{t,D,f}}{B_f}
+\tilde{\text{tf}}_{t,D} = \sum_{f \in \mathcal{F}} W_f \cdot \frac{\text{tf}_{t,D,f}}{B_f}
 \end{equation}
-where $W_{\text{title}} = 3.0, W_{\text{summary}} = 2.0, W_{\text{content}} = 1.0$, and the length normalization factor $B_f$ is:
+where $\mathcal{F} = \{\text{title}, \text{summary}, \text{content}\}$, weights are $W_{\text{title}} = 3.0, W_{\text{summary}} = 2.0, W_{\text{content}} = 1.0$, and the length normalization factor $B_f$ is:
 \begin{equation}
 B_f = (1 - b_f) + b_f \cdot \frac{\text{len}_{d,f}}{\text{avgdl}_f} \quad (b_f = 0.75)
 \end{equation}
@@ -192,27 +202,28 @@ Verification was executed against dedicated test databases (\texttt{portal\_test
 
 \begin{table}[htbp]
 \caption{Software Quality Assurance and Test Execution Metrics}
-\begin{center}
+\label{tab:sqa}
+\centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{llccc}
 \toprule
 \textbf{Harness} & \textbf{Target Test Suite} & \textbf{Count} & \textbf{Duration} & \textbf{Status} \\
 \midrule
-Vitest & Phase 2 Search Engine (IR) & 14 & 0.65s & 100\% PASS \\
-Vitest & Auth, Session \& RBAC & 3 & 0.58s & 100\% PASS \\
-Vitest & Administrative Advisory Locks & 3 & 1.10s & 100\% PASS \\
-Vitest & Content Lifecycle \& Uploads & 2 & 0.74s & 100\% PASS \\
-Vitest & Phase 1 SQL Search \& Logs & 2 & 0.54s & 100\% PASS \\
-Vitest & Moderation \& Mentions & 2 & 0.95s & 100\% PASS \\
-Vitest & SEO Metadata \& Analytics & 1 & 0.67s & 100\% PASS \\
-Vitest & Seed Corpus Validation (80 Docs) & 3 & 2.61s & 100\% PASS \\
-Vitest & Deployment \& Health Probes & 8 & 0.53s & 100\% PASS \\
-Playwright & E2E Chromium User Journeys & 7 & 16.6s & 100\% PASS \\
-TypeScript & Full Workspace Typecheck & 3 Pkgs & 2.10s & 0 Errors \\
-ESLint & Codebase Linting Rules & All Files & 3.20s & 0 Warnings \\
+Vitest & Phase 2 Search Engine (IR) & 14 & 0.65\,s & 100\% PASS \\
+Vitest & Auth, Session \& RBAC & 3 & 0.58\,s & 100\% PASS \\
+Vitest & Administrative Advisory Locks & 3 & 1.10\,s & 100\% PASS \\
+Vitest & Content Lifecycle \& Uploads & 2 & 0.74\,s & 100\% PASS \\
+Vitest & Phase 1 SQL Search \& Logs & 2 & 0.54\,s & 100\% PASS \\
+Vitest & Moderation \& Mentions & 2 & 0.95\,s & 100\% PASS \\
+Vitest & SEO Metadata \& Analytics & 1 & 0.67\,s & 100\% PASS \\
+Vitest & Seed Corpus Validation (80 Docs) & 3 & 2.61\,s & 100\% PASS \\
+Vitest & Deployment \& Health Probes & 8 & 0.53\,s & 100\% PASS \\
+Playwright & E2E Chromium User Journeys & 7 & 16.6\,s & 100\% PASS \\
+TypeScript & Full Workspace Typecheck & 3 Pkgs & 2.10\,s & 0 Errors \\
+ESLint & Codebase Linting Rules & All Files & 3.20\,s & 0 Warnings \\
 \bottomrule
-\end{tabular}
-\label{tab:sqa}
-\end{center}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Comparative Information Retrieval Benchmark}
@@ -223,44 +234,52 @@ P@5 = \frac{|\text{Relevant documents in top 5}|}{5}
 
 \begin{table}[htbp]
 \caption{Information Retrieval Evaluation Across 5 Vietnamese Queries}
-\begin{center}
+\label{tab:benchmark}
+\centering
+\resizebox{\columnwidth}{!}{%
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{llcccc}
 \toprule
-\textbf{Query} & \textbf{Algorithm} & \textbf{Retrieved ($|R|$)} & \textbf{Latency} & \textbf{P@5} & \textbf{MRR} \\
+\textbf{Query} & \textbf{Algorithm} & \textbf{Retr. ($|R|$)} & \textbf{Latency} & \textbf{P@5} & \textbf{MRR} \\
 \midrule
-``trí tuệ nhân tạo'' & SQL ILIKE & 0 & 4.82\,ms & 0.00 & 0.000 \\
+\multirow{4}{*}{\textit{``trí tuệ nhân tạo''}} 
+ & SQL ILIKE & 0 & 4.82\,ms & 0.00 & 0.000 \\
  & TF-IDF (Cosine) & 71 & 15.25\,ms & 0.20 & 1.000 \\
  & BM25F & 71 & 14.75\,ms & 0.20 & 0.250 \\
  & Hybrid & 71 & 17.06\,ms & 0.20 & 0.250 \\
 \midrule
-``học máy'' & SQL ILIKE & 1 & 5.06\,ms & 0.20 & 1.000 \\
+\multirow{4}{*}{\textit{``học máy''}} 
+ & SQL ILIKE & 1 & 5.06\,ms & 0.20 & 1.000 \\
  & TF-IDF (Cosine) & 31 & 7.55\,ms & 0.20 & 1.000 \\
  & BM25F & 31 & 7.82\,ms & 0.20 & 1.000 \\
  & Hybrid & 31 & 8.34\,ms & 0.20 & 1.000 \\
 \midrule
-``bán dẫn'' & SQL ILIKE & 0 & 3.68\,ms & 0.00 & 0.000 \\
-\textit{(Negative Control)} & TF-IDF (Cosine) & 38 & 8.28\,ms & 0.00 & 0.000 \\
+\multirow{4}{*}{\parbox{2.2cm}{\textit{``bán dẫn''}\\ \scriptsize(Negative Control)}} 
+ & SQL ILIKE & 0 & 3.68\,ms & 0.00 & 0.000 \\
+ & TF-IDF (Cosine) & 38 & 8.28\,ms & 0.00 & 0.000 \\
  & BM25F & 38 & 8.96\,ms & 0.00 & 0.000 \\
  & Hybrid & 38 & 9.45\,ms & 0.00 & 0.000 \\
 \midrule
-``chuyển đổi số'' & SQL ILIKE & 0 & 3.93\,ms & 0.00 & 0.000 \\
+\multirow{4}{*}{\textit{``chuyển đổi số''}} 
+ & SQL ILIKE & 0 & 3.93\,ms & 0.00 & 0.000 \\
  & TF-IDF (Cosine) & 69 & 15.54\,ms & 0.20 & 0.500 \\
  & BM25F & 69 & 12.88\,ms & 0.20 & 1.000 \\
  & Hybrid & 69 & 14.11\,ms & 0.20 & 1.000 \\
 \midrule
-``an ninh mạng'' & SQL ILIKE & 0 & 3.70\,ms & 0.00 & 0.000 \\
+\multirow{4}{*}{\textit{``an ninh mạng''}} 
+ & SQL ILIKE & 0 & 3.70\,ms & 0.00 & 0.000 \\
  & TF-IDF (Cosine) & 11 & 4.87\,ms & 0.00 & 0.000 \\
  & BM25F & 11 & 4.36\,ms & 0.00 & 0.000 \\
  & Hybrid & 11 & 6.79\,ms & 0.00 & 0.000 \\
 \midrule
-\textbf{Macro Average} & \textbf{SQL ILIKE} & \textbf{0.2 docs} & \textbf{4.24\,ms} & \textbf{0.04} & \textbf{0.200} \\
-\textbf{(Across 5 Queries)} & \textbf{TF-IDF} & \textbf{44.0 docs} & \textbf{10.30\,ms} & \textbf{0.12} & \textbf{0.500} \\
+\multirow{4}{*}{\parbox{2.2cm}{\textbf{Macro Average}\\ \scriptsize(5 Queries)}} 
+ & \textbf{SQL ILIKE} & \textbf{0.2 docs} & \textbf{4.24\,ms} & \textbf{0.04} & \textbf{0.200} \\
+ & \textbf{TF-IDF} & \textbf{44.0 docs} & \textbf{10.30\,ms} & \textbf{0.12} & \textbf{0.500} \\
  & \textbf{BM25F} & \textbf{44.0 docs} & \textbf{9.75\,ms} & \textbf{0.12} & \textbf{0.450} \\
  & \textbf{Hybrid} & \textbf{44.0 docs} & \textbf{11.15\,ms} & \textbf{0.12} & \textbf{0.450} \\
 \bottomrule
-\end{tabular}
-\label{tab:benchmark}
-\end{center}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Discussion on IR Dynamics and Ranking Behavior}
